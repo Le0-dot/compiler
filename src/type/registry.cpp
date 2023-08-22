@@ -1,13 +1,13 @@
 #include <memory>
 #include <utility>
 
-#include "types/registry.hpp"
-#include "types/type_id.hpp"
-#include "types/type.hpp"
-#include "types/array_type.hpp"
-#include "types/anon_struct_type.hpp"
-#include "types/struct_type.hpp"
-#include "types/function_type.hpp"
+#include "type/registry.hpp"
+#include "type/type_id.hpp"
+#include "type/type.hpp"
+#include "type/array_type.hpp"
+#include "type/anon_struct_type.hpp"
+#include "type/struct_type.hpp"
+#include "type/function_type.hpp"
 
 
 auto type::registry::id(const std::vector<type_id>& members) noexcept -> type_id {

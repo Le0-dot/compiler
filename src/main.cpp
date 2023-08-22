@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "types/registry.hpp"
+#include "type/registry.hpp"
 
 int main() {
     return 0;
