@@ -12,16 +12,19 @@
 namespace type {
 
 class array_type : public type {
-    friend std::unique_ptr<array_type> std::make_unique<array_type>(llvm::ArrayType*&, ::type::type_id&, std::size_t&);
+    friend auto std::make_unique<array_type>(
+	    llvm::ArrayType*&,
+	    ::type::type_id&,
+	    std::size_t&
+	) -> std::unique_ptr<array_type>;
 
-private:
     type_id _element;
     std::size_t _length;
 
-    array_type(llvm::ArrayType* _type, type_id element, std::size_t length) noexcept 
-	: type{_type}
-	, _element{std::move(element)}
-	, _length{std::move(length)}
+    array_type(llvm::ArrayType* atype, type_id element, std::size_t length) noexcept 
+	: type{atype}
+	, _element{element}
+	, _length{length}
     {}
 
 public:
@@ -29,4 +32,4 @@ public:
     auto length() const noexcept -> std::size_t { return _length; }
 };
 
-}
+} // namespace type

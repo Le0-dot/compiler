@@ -34,9 +34,13 @@ enum class type_id : std::uint64_t {
     primitive_bound,
 };
 
-constexpr inline type_id& operator++(type_id& id) {
+constexpr inline auto operator++(type_id& tid) -> type_id& {
     using type_id_underlying = std::underlying_type_t<type_id>;
-    return id = static_cast<type_id>(static_cast<type_id_underlying>(id) + 1);
+    return tid = static_cast<type_id>(static_cast<type_id_underlying>(tid) + 1);
 }
 
+constexpr inline auto valid(const type_id& tid) -> bool {
+    return tid == type_id::undetermined;
 }
+
+} // namespace type

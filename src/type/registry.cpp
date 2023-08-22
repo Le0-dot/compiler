@@ -11,51 +11,54 @@
 
 
 auto type::registry::id(const std::vector<type_id>& members) noexcept -> type_id {
-    if(auto it = _anon_structs.find(members); it != _anon_structs.end())
-	return it->second;
+    if(auto iter = _anon_structs.find(members); iter != _anon_structs.end()) {
+	return iter->second;
+    }
 
     std::vector<llvm::Type*> members_llvm(members.size());
-    std::ranges::transform(members, members_llvm.begin(), [this] (auto t) { return *get(t); });
+    std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type); });
 
-    llvm::StructType* st = llvm::StructType::get(_context, members_llvm);
+    llvm::StructType* anon_struct_t = llvm::StructType::get(_context, members_llvm);
 
     type_id tid{next_id()};
 
-    _ids[tid] = std::make_unique<anon_struct_type>(st, members);
+    _ids[tid] = std::make_unique<anon_struct_type>(anon_struct_t, members);
     _anon_structs[members] = tid;
 
     return tid;
 }
 
 auto type::registry::id(const std::vector<type_id>& params, type_id ret) noexcept -> type_id {
-    auto p = std::make_pair(params, ret);
-    if(auto it = _functions.find(p); it != _functions.end())
-	return it->second;
+    auto func_pair = std::make_pair(params, ret);
+    if(auto iter = _functions.find(func_pair); iter != _functions.end()) {
+	return iter->second;
+    }
 
     std::vector<llvm::Type*> params_llvm(params.size());
-    std::ranges::transform(params, params_llvm.begin(), [this] (auto t) { return *get(t); });
+    std::ranges::transform(params, params_llvm.begin(), [this] (auto type) { return *get(type); });
 
-    llvm::FunctionType* ft = llvm::FunctionType::get(*get(ret), params_llvm, false);
+    llvm::FunctionType* function_t = llvm::FunctionType::get(*get(ret), params_llvm, false);
 
     type_id fid{next_id()};
 
-    _ids[fid] = std::make_unique<function_type>(ft, params, ret);
-    _functions[p] = fid;
+    _ids[fid] = std::make_unique<function_type>(function_t, params, ret);
+    _functions[func_pair] = fid;
 
     return fid;
 }
 
 auto type::registry::id(type_id elements, std::size_t size) noexcept -> type_id {
-    auto p = std::make_pair(elements, size);
-    if(auto it = _arrays.find(p); it != _arrays.end())
-	return it->second;
+    auto arr_pair = std::make_pair(elements, size);
+    if(auto iter = _arrays.find(arr_pair); iter != _arrays.end()) {
+	return iter->second;
+    }
 
-    llvm::ArrayType* at = llvm::ArrayType::get(*get(elements), size);
+    llvm::ArrayType* array_t = llvm::ArrayType::get(*get(elements), size);
 
     type_id aid{next_id()};
 
-    _ids[aid] = std::make_unique<array_type>(at, elements, size);
-    _arrays[p] = aid;
+    _ids[aid] = std::make_unique<array_type>(array_t, elements, size);
+    _arrays[arr_pair] = aid;
 
     return aid;
 }
@@ -78,34 +81,37 @@ auto type::registry::get_array(type_id elements, std::size_t size) noexcept -> a
 
 auto type::registry::make_struct(const std::string& name, const std::vector<std::pair<std::string, type_id>>& members) noexcept -> type_id {
     std::vector<llvm::Type*> members_llvm(members.size());
-    std::ranges::transform(members, members_llvm.begin(), [this] (auto t) { return *get(t.second); });
+    std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type.second); });
 
-    llvm::StructType* st = llvm::StructType::get(_context, members_llvm);
-    st->setName(name);
+    llvm::StructType* struct_t = llvm::StructType::get(_context, members_llvm);
+    struct_t->setName(name);
 
     type_id sid{next_id()};
 
-    _ids[sid] = std::make_unique<struct_type>(st, members);
+    _ids[sid] = std::make_unique<struct_type>(struct_t, members);
     _names[name] = sid;
 
     return sid;
 }
 
-auto type::registry::is_struct(type_id id) noexcept -> bool {
-    if(const type& t = get(id); *t)
-	return t->isStructTy();
+auto type::registry::is_struct(type_id tid) noexcept -> bool {
+    if(const type& type = get(tid); *type) {
+	return type->isStructTy();
+    }
     return false;
 }
 
-auto type::registry::is_array(type_id id) noexcept -> bool {
-    if(const type& t = get(id); *t)
-	return t->isArrayTy();
+auto type::registry::is_array(type_id tid) noexcept -> bool {
+    if(const type& type = get(tid); *type) {
+	return type->isArrayTy();
+    }
     return false;
 }
 
-auto type::registry::is_function(type_id id) noexcept -> bool {
-    if(const type& t = get(id); *t)
-	return t->isFunctionTy();
+auto type::registry::is_function(type_id tid) noexcept -> bool {
+    if(const type& type = get(tid); *type) {
+	return type->isFunctionTy();
+    }
     return false;
 }
 

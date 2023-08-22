@@ -28,7 +28,7 @@ struct integral_type<T> {
 template<typename T>
 using integral_type_t = typename integral_type<T>::type;
 
-}
+} // namespace
 
 
 template<typename T, typename U>
@@ -60,22 +60,23 @@ using hash_for_t = typename hash_for<T>::type;
 template<typename T>
 requires integral<T>
 struct vector_hash {
-    std::size_t operator()(const std::vector<T>& v) const noexcept {
+    auto operator()(const std::vector<T>& vec) const noexcept -> std::size_t {
 	using int_t = integral_type_t<T>;
 
-	std::size_t seed = v.size();
-	for(const auto& i : v)
-	    seed ^= static_cast<int_t>(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+	std::size_t seed = vec.size();
+	for(const auto& elem : vec) {
+	    seed ^= static_cast<int_t>(elem) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+	}
 	return seed;
     }
 };
 
 template<typename T, typename U>
 struct pair_hash {
-    std::size_t operator()(const std::pair<T, U>& p) const noexcept {
-	uintmax_t hash = hash_for_t<T>{}(p.first);
+    auto operator()(const std::pair<T, U>& pair) const noexcept -> std::size_t {
+	uintmax_t hash = hash_for_t<T>{}(pair.first);
         hash <<= sizeof(uintmax_t) * 4;
-        hash ^= hash_for_t<U>{}(p.second);
+        hash ^= hash_for_t<U>{}(pair.second);
         return std::hash<uintmax_t>{}(hash);
     }
 };

@@ -26,7 +26,6 @@ class registry {
     using array_hash       = hash_for_t<array_key>;
     using function_hash    = hash_for_t<function_key>;
 
-private:
     llvm::LLVMContext& _context;
 
     std::unordered_map<type_id, std::unique_ptr<type>> _ids;
@@ -37,14 +36,14 @@ private:
     std::unordered_map<function_key, type_id, function_hash> _functions;
 
 public:
-    registry()                           = delete;
-    registry(const registry&)		 = delete;
-    registry(registry&&)      		 = delete;
-    registry& operator=(const registry&) = delete;
-    registry& operator=(registry&&)      = delete;
-    ~registry()				 = default;
+    registry()                                   = delete;
+    registry(const registry&)		         = delete;
+    registry(registry&&)      		         = delete;
+    auto operator=(const registry&) -> registry& = delete;
+    auto operator=(registry&&) -> registry&      = delete;
+    ~registry()				         = default;
 
-    registry(llvm::LLVMContext& context) : _context{context} {
+    explicit registry(llvm::LLVMContext& context) : _context{context} {
 	make_primitives();
     }
 
@@ -54,7 +53,7 @@ public:
     [[nodiscard]] auto id(const std::vector<type_id>& params, type_id ret) noexcept -> type_id;
     [[nodiscard]] auto id(type_id elements, std::size_t size)              noexcept -> type_id;
 
-    [[nodiscard]] auto get(type_id id)	            -> type& { return *_ids[id]; }
+    [[nodiscard]] auto get(type_id tid)	            -> type& { return *_ids[tid]; }
     [[nodiscard]] auto get(const std::string& name) -> type& { return get(id(name)); }
 
     [[nodiscard]] auto get_struct(const std::string& name)			     noexcept -> struct_type&;
@@ -64,19 +63,19 @@ public:
 
     auto make_struct(const std::string& name, const std::vector<std::pair<std::string, type_id>>& members) noexcept -> type_id;
 
-    void make_alias(const std::string& alias, type_id id) noexcept { _names[alias] = id; }
+    void make_alias(const std::string& alias, type_id tid) noexcept { _names[alias] = tid; }
 
-    [[nodiscard]] auto is_struct(type_id id)                       noexcept -> bool;
-    [[nodiscard]] auto is_array(type_id id)                        noexcept -> bool;
-    [[nodiscard]] auto is_function(type_id id)                     noexcept -> bool;
+    [[nodiscard]] auto is_struct(type_id tid)                       noexcept -> bool;
+    [[nodiscard]] auto is_array(type_id tid)                        noexcept -> bool;
+    [[nodiscard]] auto is_function(type_id tid)                     noexcept -> bool;
 
 private:
     static auto next_id() noexcept -> type_id {
-	static type_id _id{type_id::primitive_bound};
-	return ++_id;
+	static type_id tid{type_id::primitive_bound};
+	return ++tid;
     }
 
     void make_primitives() noexcept;
 };
 
-}
+} // namespace type

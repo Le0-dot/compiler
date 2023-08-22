@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include <llvm/IR/DerivedTypes.h>
 
@@ -12,18 +12,20 @@
 namespace type {
 
 class anon_struct_type : public type {
-    friend std::unique_ptr<anon_struct_type> std::make_unique<anon_struct_type>(llvm::StructType*&, const std::vector<::type::type_id>&);
+    friend auto std::make_unique<anon_struct_type>(
+	    llvm::StructType*&,
+	    const std::vector<::type::type_id>&
+	) -> std::unique_ptr<anon_struct_type>;
 
-private:
     std::vector<type_id> _members;
 
-    anon_struct_type(llvm::StructType* _type, const std::vector<type_id>& members)
-	: type{_type}
-	, _members{members}
+    anon_struct_type(llvm::StructType* atype, std::vector<type_id>  members)
+	: type{atype}
+	, _members{std::move(members)}
     {}
 
 public:
     auto members() const noexcept -> const auto& { return _members; }
 };
 
-}
+} // namespace type
