@@ -24,7 +24,7 @@ public:
 
 private:
     using unary_variation = std::unordered_map<type::type_id, unary_inserter_wrapper>;
-    using binary_variation = std::unordered_map<std::pair<type::type_id, type::type_id>, binary_inserter_wrapper>;
+    using binary_variation = std::unordered_map<std::pair<type::type_id, type::type_id>, binary_inserter_wrapper, pair_hash<type::type_id, type::type_id>>;
 
     std::unordered_map<std::pair<type::type_id, type::type_id>, cast_inserter_wrapper, pair_hash<type::type_id, type::type_id>> _casts{};
     std::unordered_map<std::string, unary_variation> _unary{};
