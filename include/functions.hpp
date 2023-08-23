@@ -30,16 +30,23 @@ private:
     std::unordered_map<std::string, unary_variation> _unary{};
     std::unordered_map<std::string, binary_variation> _binary{};
 
+    static constexpr auto dummy_cast = [] (llvm::IRBuilderBase*, llvm::Value*) -> llvm::Value* { return nullptr; };
+    static constexpr auto dummy_unary = [] (llvm::IRBuilderBase*, llvm::Value*) -> llvm::Value* { return nullptr; };
+    static constexpr auto dummy_binary = [] (llvm::IRBuilderBase*, llvm::Value*, llvm::Value*) -> llvm::Value* { return nullptr; };
+
 public:
     auto cast_exists(type::type_id from_t, type::type_id to_t) const noexcept -> bool;
     auto cast(type::type_id from_t, type::type_id to_t) noexcept -> cast_inserter_wrapper;
+    void insert_dummy_cast(type::type_id from_t, type::type_id to_t) noexcept;
     void insert_cast(type::type_id from_t, type::type_id to_t, cast_inserter_wrapper inserter) noexcept;
 
     auto unary_exists(const std::string& oper, type::type_id tid) const noexcept -> bool;
     auto unary(const std::string& oper, type::type_id tid) noexcept -> unary_inserter_wrapper;
+    void insert_dummy_unary(const std::string& oper, type::type_id tid) noexcept;
     void insert_unary(const std::string& oper, type::type_id tid, unary_inserter_wrapper inserter) noexcept;
 
     auto binary_exists(const std::string& oper, type::type_id left, type::type_id right) const noexcept -> bool;
     auto binary(const std::string& oper, type::type_id left, type::type_id right) noexcept -> binary_inserter_wrapper;
+    void insert_dummy_binary(const std::string& oper, type::type_id left, type::type_id right) noexcept;
     void insert_binary(const std::string& oper, type::type_id left, type::type_id right, binary_inserter_wrapper inserter) noexcept;
 };
