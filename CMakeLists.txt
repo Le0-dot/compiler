@@ -5,10 +5,13 @@ project(
     VERSION 0.1.0
 )
 
-# ant_tree
+# any_tree
 
-add_subdirectory(any_tree)
+add_subdirectory(include/any_tree)
 
+# nlohmann_json
+
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # llvm options
 
@@ -36,4 +39,4 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/in
 include(CMakePrintHelpers)
 cmake_print_variables(llvm_libs)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${llvm_libs} PUBLIC any_tree)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${llvm_libs} any_tree nlohmann_json::nlohmann_json)
