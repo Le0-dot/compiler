@@ -28,13 +28,13 @@ llvm_map_components_to_libnames(llvm_libs Support Core IRReader)
 
 # Add executable
 
-set(SRC src/main.cpp src/scope.cpp src/functions.cpp src/type/registry.cpp)
+set(SRC src/main.cpp src/scope.cpp src/functions.cpp src/tree.cpp src/type/registry.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC} ${TYPES})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/ PRIVATE ${LLVM_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/ ${LLVM_INCLUDE_DIRS})
 
 include(CMakePrintHelpers)
 cmake_print_variables(llvm_libs)
