@@ -38,6 +38,7 @@ private:
     variation _unary{};
 
 public:
+    unary_operator() = default;
     inline explicit unary_operator(std::uint64_t precedense) : _precedense{precedense} {}
 
     inline auto precedense() const noexcept -> std::uint64_t { return _precedense; }
@@ -58,6 +59,7 @@ private:
     variation _binary{};
 
 public:
+    binary_operator() = default;
     inline explicit binary_operator(std::uint64_t precedense) : _precedense{precedense} {}
 
     inline auto precedense() const noexcept -> std::uint64_t { return _precedense; }
@@ -72,7 +74,7 @@ class special_functions {
     std::unordered_map<std::string, binary_operator> _binary{};
 
 public:
-    inline auto casts(type::type_id from_type) noexcept -> casts& { return _casts[from_type]; }
+    inline auto cast(type::type_id from_type) noexcept -> casts& { return _casts[from_type]; }
     inline auto unary(const std::string& oper) noexcept -> unary_operator& { return _unary[oper]; }
     inline auto binary(const std::string& oper) noexcept -> binary_operator& { return _binary[oper]; }
 
