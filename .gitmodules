@@ -1,3 +1,3 @@
-[submodule "any_tree"]
+[submodule "include/any_tree"]
 	path = include/any_tree
 	url = https://github.com/Le0-dot/any_tree
