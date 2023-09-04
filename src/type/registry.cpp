@@ -124,13 +124,10 @@ void type::registry::make_primitives() noexcept {
     _ids[type_id::u16]          = std::make_unique<type>(llvm::Type::getInt16Ty(_context));
     _ids[type_id::u32]          = std::make_unique<type>(llvm::Type::getInt32Ty(_context));
     _ids[type_id::u64]          = std::make_unique<type>(llvm::Type::getInt64Ty(_context));
-    _ids[type_id::u128]         = std::make_unique<type>(llvm::Type::getInt128Ty(_context));
     _ids[type_id::i8]           = std::make_unique<type>(llvm::Type::getInt8Ty(_context));
     _ids[type_id::i16]          = std::make_unique<type>(llvm::Type::getInt16Ty(_context));
     _ids[type_id::i32]          = std::make_unique<type>(llvm::Type::getInt32Ty(_context));
     _ids[type_id::i64]          = std::make_unique<type>(llvm::Type::getInt64Ty(_context));
-    _ids[type_id::i128]         = std::make_unique<type>(llvm::Type::getInt128Ty(_context));
     _ids[type_id::fp32]         = std::make_unique<type>(llvm::Type::getFloatTy(_context));
     _ids[type_id::fp64]         = std::make_unique<type>(llvm::Type::getDoubleTy(_context));
-    _ids[type_id::fp128]        = std::make_unique<type>(llvm::Type::getFP128Ty(_context));
 }

@@ -22,15 +22,12 @@ enum class type_id : std::uint64_t {
     u16,
     u32,
     u64,
-    u128,
     i8,
     i16,
     i32,
     i64,
-    i128,
     fp32,
     fp64,
-    fp128,
     primitive_bound,
 };
 
