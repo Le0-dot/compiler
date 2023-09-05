@@ -1,11 +1,8 @@
 #include <algorithm>
 #include <iostream>
-#include <fstream>
-#include <iterator>
 #include <unordered_map>
 #include <functional>
 #include <vector>
-#include <any>
 
 #include "tree.hpp"
 
@@ -22,7 +19,25 @@ auto tree_builder::function(const json& object) -> function_node {
 
     node.payload().name = object["funcName"].template get<std::string>();
     node.payload().return_type = _types.id(object["funcReturn"].template get<std::string>());
-    std::ranges::transform(object["funcParams"], std::back_inserter(node.payload().params), var_def_hander());
+
+    node.payload().params.reserve(object["funcParams"].size());
+    node.payload().params_type.reserve(object["funcParams"].size());
+
+    std::ranges::transform(
+	    object["funcParams"], 
+	    std::back_inserter(node.payload().params), 
+	    [] (const json& object) { 
+		return object["varName"].template get<std::string>(); 
+	    }
+    );
+    std::ranges::transform(
+	    object["funcParams"], 
+	    std::back_inserter(node.payload().params_type), 
+	    [this] (const json& object) { 
+		return _types.id(object["varType"].template get<std::string>()); 
+	    }
+    );
+
     std::ranges::transform(object["funcBody"], std::back_inserter(node.children()), stmt_hander());
 
     return node;
@@ -94,13 +109,6 @@ auto tree_builder::call(const json& object) -> call_node {
     std::ranges::transform(object["callParams"], std::back_inserter(node.children()), expr_hander());
 
     return node;
-}
-
-auto tree_builder::var_def(const json& object) -> variable {
-    return {
-	.name = object["varName"].template get<std::string>(),
-	.tid = _types.id(object["varType"].template get<std::string>()),
-    };
 }
 
 auto tree_builder::literal(const json& object) -> std::any {
