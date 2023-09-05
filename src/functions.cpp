@@ -1,6 +1,7 @@
 #include <utility>
 
 #include "functions.hpp"
+#include "type/type_id.hpp"
 
 
 auto casts::get(type::type_id to_type) const -> std::optional<inserter_wrapper> {
@@ -14,26 +15,34 @@ void casts::insert(type::type_id to_type, inserter_wrapper inserter) {
     _casts[to_type] = std::move(inserter);
 }
 
-auto unary_operator::get(type::type_id operand_type) -> std::optional<inserter_wrapper> {
+auto unary_operator::get(type::type_id operand_type) -> operator_info {
     if(auto iter = _unary.find(operand_type); iter != _unary.end()) {
 	return iter->second;
     }
     return {};
 }
 
-void unary_operator::insert(type::type_id operand_type, inserter_wrapper inserter) {
-    _unary[operand_type] = std::move(inserter);
+void unary_operator::insert(type::type_id operand_type, type::type_id return_type) {
+    _unary[operand_type] = {return_type, {}};
 }
 
-auto binary_operator::get(type::type_id left, type::type_id right) -> std::optional<inserter_wrapper> {
+void unary_operator::specialize(type::type_id operand_type, inserter_wrapper inserter) {
+    _unary[operand_type].second = std::move(inserter);
+}
+
+auto binary_operator::get(type::type_id left, type::type_id right) -> operator_info {
     if(auto iter = _binary.find(std::make_pair(left, right)); iter != _binary.end()) {
 	return iter->second;
     }
     return {};
 }
 
-void binary_operator::insert(type::type_id left, type::type_id right, inserter_wrapper inserter) {
-    _binary[std::make_pair(left, right)] = std::move(inserter);
+void binary_operator::insert(type::type_id left, type::type_id right, type::type_id return_type) {
+    _binary[std::make_pair(left, right)] = {return_type, {}};
+}
+
+void binary_operator::specialize(type::type_id left, type::type_id right, inserter_wrapper inserter) {
+    _binary[std::make_pair(left, right)].second = std::move(inserter);
 }
 
 auto special_functions::new_unary(const std::string& oper, std::uint64_t precedense) noexcept -> bool {

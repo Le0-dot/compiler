@@ -30,9 +30,11 @@ class unary_operator {
 public:
     using unary_inserter = llvm::Value*(llvm::IRBuilderBase*, llvm::Value*);
     using inserter_wrapper = std::function<unary_inserter>;
+    using operator_info = std::pair<type::type_id, inserter_wrapper>;
+
+    using variation = std::unordered_map<type::type_id, operator_info>;
 
 private:
-    using variation = std::unordered_map<type::type_id, inserter_wrapper>;
      
     std::uint64_t _precedense{};
     variation _unary{};
@@ -43,18 +45,20 @@ public:
 
     inline auto precedense() const noexcept -> std::uint64_t { return _precedense; }
 
-    auto get(type::type_id operand_type) -> std::optional<inserter_wrapper>;
-    void insert(type::type_id operand_type, inserter_wrapper inserter);
+    auto get(type::type_id operand_type) -> operator_info;
+    void insert(type::type_id operand_type, type::type_id return_type);
+    void specialize(type::type_id operand_type, inserter_wrapper inserter);
 };
 
 class binary_operator {
 public:
     using binary_inserter = llvm::Value*(llvm::IRBuilderBase*, llvm::Value*, llvm::Value*);
     using inserter_wrapper = std::function<binary_inserter>;
+    using operator_info = std::pair<type::type_id, inserter_wrapper>; 
+
+    using variation = std::unordered_map<std::pair<type::type_id, type::type_id>, operator_info, pair_hash<type::type_id, type::type_id>>;
 
 private:
-    using variation = std::unordered_map<std::pair<type::type_id, type::type_id>, inserter_wrapper, pair_hash<type::type_id, type::type_id>>;
-     
     std::uint64_t _precedense{};
     variation _binary{};
 
@@ -64,8 +68,15 @@ public:
 
     inline auto precedense() const noexcept -> std::uint64_t { return _precedense; }
 
-    auto get(type::type_id left, type::type_id right) -> std::optional<inserter_wrapper>;
-    void insert(type::type_id left, type::type_id right, inserter_wrapper inserter);
+    auto get(type::type_id left, type::type_id right) -> operator_info;
+    void insert(type::type_id left, type::type_id right, type::type_id return_type);
+    void specialize(type::type_id left, type::type_id right, inserter_wrapper inserter);
+
+    auto begin() const { return _binary.begin(); }
+    auto begin()       { return _binary.begin(); }
+
+    auto end() const { return _binary.end(); }
+    auto end()       { return _binary.end(); }
 };
 
 class special_functions {
