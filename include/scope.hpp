@@ -19,6 +19,8 @@ class scope_manager {
     std::vector<scope> _scopes{};
 
 public:
+    scope_manager() { push(); }
+
     void push() noexcept;
     void pop() noexcept;
 
