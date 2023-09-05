@@ -79,6 +79,22 @@ auto type::registry::get_array(type_id elements, std::size_t size) noexcept -> a
     return static_cast<array_type&>(get(id(elements, size)));
 }
 
+auto type::registry::get_struct(type_id tid) noexcept -> struct_type& {
+    return static_cast<struct_type&>(get(tid));
+}
+
+auto type::registry::get_anon_struct(type_id tid) noexcept -> anon_struct_type& {
+    return static_cast<anon_struct_type&>(get(tid));
+}
+
+auto type::registry::get_function(type_id tid) noexcept -> function_type& {
+    return static_cast<function_type&>(get(tid));
+}
+
+auto type::registry::get_array(type_id tid) noexcept -> array_type& {
+    return static_cast<array_type&>(get(tid));
+}
+
 auto type::registry::make_struct(const std::string& name, const std::vector<std::pair<std::string, type_id>>& members) noexcept -> type_id {
     std::vector<llvm::Type*> members_llvm(members.size());
     std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type.second); });

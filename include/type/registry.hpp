@@ -61,6 +61,11 @@ public:
     [[nodiscard]] auto get_function(const std::vector<type_id>& params, type_id ret) noexcept -> function_type&;
     [[nodiscard]] auto get_array(type_id elements, std::size_t size)                 noexcept -> array_type&;
 
+    [[nodiscard]] auto get_struct(type_id tid)	    noexcept -> struct_type&;
+    [[nodiscard]] auto get_anon_struct(type_id tid) noexcept -> anon_struct_type&;
+    [[nodiscard]] auto get_function(type_id tid)    noexcept -> function_type&;
+    [[nodiscard]] auto get_array(type_id tid)       noexcept -> array_type&;
+
     auto make_struct(const std::string& name, const std::vector<std::pair<std::string, type_id>>& members) noexcept -> type_id;
 
     void make_alias(const std::string& alias, type_id tid) noexcept { _names[alias] = tid; }
