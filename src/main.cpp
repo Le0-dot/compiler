@@ -7,9 +7,10 @@
 #include <type_traits>
 
 #include "tree.hpp"
+#include "type/type_id.hpp"
 #include "type/registry.hpp"
 #include "functions.hpp"
-#include "type/type_id.hpp"
+#include "semantic_analyzer.hpp"
 
 void tabs(std::size_t n) {
     for(auto i = 0U; i < n; ++i) {
@@ -55,87 +56,88 @@ auto main(int argc, char** argv) -> int {
 
     auto tree = tree_builder{functions, types}(json);
 
-
     std::size_t tab{};
-    any_tree::children_visitor<void> visitor {
-	any_tree::make_child_visitor<file_node>([&visitor, &tab] (file_node& n) { 
+    any_tree::const_children_visitor<void> visitor {
+	any_tree::make_const_child_visitor<file_node>([&visitor, &tab] (const file_node& n) { 
 		std::cout << "file" << std::endl;
 		++tab;
-		n.for_each_child([&visitor] (std::any& n) { any_tree::visit_node(visitor, n); });
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::const_visit_node(visitor, n); });
 	}),
-	any_tree::make_child_visitor<function_node>([&visitor, &tab] (function_node& n) { 
+	any_tree::make_const_child_visitor<function_node>([&visitor, &tab] (const function_node& n) { 
 		tabs(tab); 
 		std::cout << "func " << n.payload().name << std::endl;
 		++tab;
-		for(const auto& param: n.payload().params) {
+		auto param_name = n.payload().params.begin();
+		auto param_type = n.payload().params_type.begin();
+		while(param_name != n.payload().params.end()) {
 		    tabs(tab);
-		    std::cout << param.name << ' ' << param.tid << std::endl;
+		    std::cout << *param_name++ << ' ' << *param_type++ << std::endl;
 		}
 		tabs(--tab);
 		std::cout << n.payload().return_type << std::endl;
 		++tab;
-		n.for_each_child([&visitor] (std::any& n) { any_tree::visit_node(visitor, n); });
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::const_visit_node(visitor, n); });
 		--tab;
 	}),
-	any_tree::make_child_visitor<statement_node>([&visitor, &tab] (statement_node& n) {
+	any_tree::make_const_child_visitor<statement_node>([&visitor, &tab] (const statement_node& n) {
 		tabs(tab);
 		std::cout << (n.payload().is_return ? "return " : "") << "statement" << std::endl;
 		++tab;
-		any_tree::visit_node(visitor, n.child_at(0));
+		any_tree::const_visit_node(visitor, n.child_at(0));
 		--tab;
 	}),
-	any_tree::make_child_visitor<binary_expr_node>([&visitor, &tab] (binary_expr_node& n) {
+	any_tree::make_const_child_visitor<binary_expr_node>([&visitor, &tab] (const binary_expr_node& n) {
 		tabs(tab);
 		std::cout << "binary expr; op = " << n.payload().oper << std::endl;
 		tabs(tab);
 		std::cout << "lhs" << std::endl;
 		++tab;
-		any_tree::visit_node(visitor, n.child_at(0));
+		any_tree::const_visit_node(visitor, n.child_at(0));
 		tabs(--tab);
 		std::cout << "rhs" << std::endl;
 		++tab;
-		any_tree::visit_node(visitor, n.child_at(1));
+		any_tree::const_visit_node(visitor, n.child_at(1));
 		--tab;
 
 	}),
-	any_tree::make_child_visitor<identifier_node>([&tab] (identifier_node& n) {
+	any_tree::make_const_child_visitor<identifier_node>([&tab] (const identifier_node& n) {
 		tabs(tab);
 		std::cout << "identifier " << n.payload() << std::endl;
 	}),
-	any_tree::make_child_visitor<call_node>([&visitor, &tab] (call_node& n) {
+	any_tree::make_const_child_visitor<call_node>([&visitor, &tab] (const call_node& n) {
 		tabs(tab);
 		std::cout << "call " << n.payload().callee << std::endl;
 		++tab;
-		n.for_each_child([&visitor] (std::any& n) { any_tree::visit_node(visitor, n); });
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::const_visit_node(visitor, n); });
 		--tab;
 	}),
 
-	any_tree::make_child_visitor<integer_literal_node>([&tab] (integer_literal_node& n) {
+	any_tree::make_const_child_visitor<integer_literal_node>([&tab] (const integer_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload() << std::endl;
+		std::cout << "literal " << n.payload().value << std::endl;
 	}),
-	any_tree::make_child_visitor<floating_literal_node>([&tab] (floating_literal_node& n) {
+	any_tree::make_const_child_visitor<floating_literal_node>([&tab] (const floating_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload() << std::endl;
+		std::cout << "literal " << n.payload().value << std::endl;
 	}),
-	any_tree::make_child_visitor<char_literal_node>([&tab] (char_literal_node& n) {
+	any_tree::make_const_child_visitor<char_literal_node>([&tab] (const char_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload() << std::endl;
+		std::cout << "literal " << n.payload().value << std::endl;
 	}),
-	any_tree::make_child_visitor<string_literal_node>([&tab] (string_literal_node& n) {
+	any_tree::make_const_child_visitor<string_literal_node>([&tab] (const string_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload() << std::endl;
+		std::cout << "literal " << n.payload().value << std::endl;
 	}),
-	any_tree::make_child_visitor<bool_literal_node>([&tab] (bool_literal_node& n) {
+	any_tree::make_const_child_visitor<bool_literal_node>([&tab] (const bool_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload() << std::endl;
+		std::cout << "literal " << n.payload().value << std::endl;
 	}),
     };
 
+    any_tree::const_visit_node(visitor, tree);
 
-    any_tree::visit_node(visitor, tree);
-
-
+    semantic_analyzer analyzer{functions, types};
+    std::cout << any_tree::visit_node(analyzer.get_visitor(), tree) << std::endl;
 
     return 0;
 }
