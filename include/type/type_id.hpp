@@ -9,6 +9,7 @@ namespace type {
 
 enum class type_id : std::uint64_t {
     undetermined,
+    good_file, 
 
     u_literal,
     i_literal,
