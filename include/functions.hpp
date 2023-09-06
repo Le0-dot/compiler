@@ -10,6 +10,7 @@
 #include <llvm/IR/Value.h>
 
 #include "hash.hpp"
+#include "type/registry.hpp"
 #include "type/type_id.hpp"
 
 
@@ -23,7 +24,8 @@ private:
 
 public:
     auto get(type::type_id to_type) const -> std::optional<inserter_wrapper>;
-    void insert(type::type_id to_type, inserter_wrapper inserter);
+    void insert(type::type_id to_type);
+    void specialize(type::type_id to_type, inserter_wrapper inserter);
 };
 
 class unary_operator {

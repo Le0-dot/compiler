@@ -11,7 +11,11 @@ auto casts::get(type::type_id to_type) const -> std::optional<inserter_wrapper> 
     return {};
 }
 
-void casts::insert(type::type_id to_type, inserter_wrapper inserter) {
+void casts::insert(type::type_id to_type) {
+    _casts[to_type] = {};
+}
+
+void casts::specialize(type::type_id to_type, inserter_wrapper inserter) {
     _casts[to_type] = std::move(inserter);
 }
 
