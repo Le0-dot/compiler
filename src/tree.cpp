@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "tree.hpp"
+#include "type/type_id.hpp"
 
 auto tree_builder::file(const json& object) -> file_node {
     file_node node{};
@@ -122,4 +123,10 @@ auto tree_builder::literal(const json& object) -> std::any {
     };
 
     return handlers[object["tag"]](object["contents"]);
+}
+
+auto insert_impicit_cast(std::any &&node, type::type_id to_type) -> implicit_cast_node {
+    implicit_cast_node cast{to_type};
+    cast.child_at(0) = std::move(node);
+    return cast;
 }

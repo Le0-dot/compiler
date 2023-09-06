@@ -3,6 +3,7 @@
 #include <any_tree.hpp>
 #include <nlohmann/json.hpp>
 
+#include "any_tree/node.hpp"
 #include "type/type_id.hpp"
 #include "type/registry.hpp"
 #include "functions.hpp"
@@ -48,6 +49,8 @@ using char_literal_node     = any_tree::leaf<literal<char>>;
 using string_literal_node   = any_tree::leaf<literal<std::string>>;
 using bool_literal_node     = any_tree::leaf<literal<bool>>;
 
+using implicit_cast_node = any_tree::static_node<type::type_id, 1>;
+
 using json = nlohmann::json;
 
 class tree_builder {
@@ -76,5 +79,15 @@ public:
 	, _types{types}
     {}
 
+    tree_builder()                      = delete;
+    tree_builder(const tree_builder&)   = delete;
+    tree_builder(tree_builder&&)        = delete;
+    auto operator=(const tree_builder&) = delete;
+    auto operator=(tree_builder&&)      = delete;
+    ~tree_builder()                     = default;
+
+
     inline auto operator()(const json& object) -> std::any { return file(object); }
 };
+
+auto insert_impicit_cast(std::any&& node, type::type_id to_type) -> implicit_cast_node;
