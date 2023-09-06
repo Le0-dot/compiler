@@ -4,7 +4,6 @@
 #include <llvm/IR/LLVMContext.h>
 #include <nlohmann/json.hpp>
 #include <any_tree.hpp>
-#include <type_traits>
 
 #include "tree.hpp"
 #include "type/type_id.hpp"
@@ -30,15 +29,72 @@ auto main(int argc, char** argv) -> int {
     std::ifstream file{argv[1]};
     json json = json::parse(file);
 
+    llvm::LLVMContext context{};
+    type::registry types{context};
     special_functions functions{};
+
+    default_casts(functions, types);
 
     functions.new_binary("+", 0);
     functions.new_binary("-", 0);
     functions.new_binary("*", 1);
     functions.new_binary("/", 1);
 
-    llvm::LLVMContext context{};
-    type::registry types{context};
+
+    functions.binary("+").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
+    functions.binary("+").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
+    functions.binary("+").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
+    functions.binary("+").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
+
+    functions.binary("+").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
+    functions.binary("+").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
+    functions.binary("+").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
+    functions.binary("+").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
+
+    functions.binary("+").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
+    functions.binary("+").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
+
+
+    functions.binary("-").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
+    functions.binary("-").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
+    functions.binary("-").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
+    functions.binary("-").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
+
+    functions.binary("-").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
+    functions.binary("-").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
+    functions.binary("-").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
+    functions.binary("-").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
+
+    functions.binary("-").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
+    functions.binary("-").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
+
+
+    functions.binary("*").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
+    functions.binary("*").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
+    functions.binary("*").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
+    functions.binary("*").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
+
+    functions.binary("*").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
+    functions.binary("*").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
+    functions.binary("*").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
+    functions.binary("*").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
+
+    functions.binary("*").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
+    functions.binary("*").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
+
+
+    functions.binary("/").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
+    functions.binary("/").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
+    functions.binary("/").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
+    functions.binary("/").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
+
+    functions.binary("/").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
+    functions.binary("/").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
+    functions.binary("/").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
+    functions.binary("/").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
+
+    functions.binary("/").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
+    functions.binary("/").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
 
     types.make_alias("",     type::type_id::void_);
     types.make_alias("bool", type::type_id::bool_);
