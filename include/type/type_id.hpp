@@ -38,7 +38,7 @@ constexpr inline auto operator++(type_id& tid) -> type_id& {
 }
 
 constexpr inline auto valid(const type_id& tid) -> bool {
-    return tid == type_id::undetermined;
+    return tid != type_id::undetermined;
 }
 
 } // namespace type
