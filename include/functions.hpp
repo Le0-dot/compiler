@@ -94,3 +94,5 @@ public:
     auto new_unary(const std::string& oper, std::uint64_t precedense) noexcept -> bool;
     auto new_binary(const std::string& oper, std::uint64_t precedense) noexcept -> bool;
 };
+
+void default_casts(special_functions& functions, type::registry& types);
