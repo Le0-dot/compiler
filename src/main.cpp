@@ -117,7 +117,7 @@ auto main(int argc, char** argv) -> int {
 	any_tree::make_const_child_visitor<file_node>([&visitor, &tab] (const file_node& n) { 
 		std::cout << "file" << std::endl;
 		++tab;
-		n.for_each_child([&visitor] (const std::any& n) { any_tree::const_visit_node(visitor, n); });
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 	}),
 	any_tree::make_const_child_visitor<function_node>([&visitor, &tab] (const function_node& n) { 
 		tabs(tab); 
@@ -132,14 +132,14 @@ auto main(int argc, char** argv) -> int {
 		tabs(--tab);
 		std::cout << n.payload().return_type << std::endl;
 		++tab;
-		n.for_each_child([&visitor] (const std::any& n) { any_tree::const_visit_node(visitor, n); });
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 		--tab;
 	}),
 	any_tree::make_const_child_visitor<statement_node>([&visitor, &tab] (const statement_node& n) {
 		tabs(tab);
 		std::cout << (n.payload().is_return ? "return " : "") << "statement" << std::endl;
 		++tab;
-		any_tree::const_visit_node(visitor, n.child_at(0));
+		any_tree::visit_node(visitor, n.child_at(0));
 		--tab;
 	}),
 	any_tree::make_const_child_visitor<binary_expr_node>([&visitor, &tab] (const binary_expr_node& n) {
@@ -148,11 +148,11 @@ auto main(int argc, char** argv) -> int {
 		tabs(tab);
 		std::cout << "lhs" << std::endl;
 		++tab;
-		any_tree::const_visit_node(visitor, n.child_at(0));
+		any_tree::visit_node(visitor, n.child_at(0));
 		tabs(--tab);
 		std::cout << "rhs" << std::endl;
 		++tab;
-		any_tree::const_visit_node(visitor, n.child_at(1));
+		any_tree::visit_node(visitor, n.child_at(1));
 		--tab;
 
 	}),
@@ -164,7 +164,7 @@ auto main(int argc, char** argv) -> int {
 		tabs(tab);
 		std::cout << "call " << n.payload().callee << std::endl;
 		++tab;
-		n.for_each_child([&visitor] (const std::any& n) { any_tree::const_visit_node(visitor, n); });
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 		--tab;
 	}),
 
@@ -190,7 +190,7 @@ auto main(int argc, char** argv) -> int {
 	}),
     };
 
-    any_tree::const_visit_node(visitor, tree);
+    any_tree::visit_node(visitor, tree);
 
     semantic_analyzer analyzer{&functions, &types};
     std::cout << any_tree::visit_node(analyzer.get_visitor(), tree) << std::endl;
