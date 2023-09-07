@@ -15,7 +15,7 @@ public:
     using visitor = any_tree::children_visitor<type::type_id>;
 
 private:
-    scope_manager _scope{};
+    scope_manager<type::type_id> _scope{};
     special_functions& _special;
     type::registry& _types;
     visitor _visitor;

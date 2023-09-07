@@ -5,6 +5,7 @@
 
 #include "semantic_analyzer.hpp"
 #include "tree.hpp"
+#include "type/type_id.hpp"
 
 
 auto semantic_analyzer::file(const visitor& visitor, file_node& node) -> type::type_id {
@@ -100,7 +101,7 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 }
 
 auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::type_id {
-    type::type_id func_type_id = _scope.get(node.payload().callee);
+    type::type_id func_type_id = _scope.get(node.payload().callee).value_or(type::type_id::undetermined);
     if(!_types.is_function(func_type_id)) {
 	return type::type_id::undetermined;
     }
@@ -137,7 +138,7 @@ auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::t
 }
 
 auto semantic_analyzer::identifier(identifier_node& node) -> type::type_id {
-    return _scope.get(node.payload());
+    return _scope.get(node.payload()).value_or(type::type_id::undetermined);
 }
 
 auto semantic_analyzer::integer_literal(integer_literal_node& node) -> type::type_id {
