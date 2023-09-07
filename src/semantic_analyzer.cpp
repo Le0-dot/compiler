@@ -12,7 +12,7 @@ auto semantic_analyzer::file(const visitor& visitor, file_node& node) -> type::t
     bool result = std::ranges::all_of(
 	    node.children(), 
 	    type::valid, 
-	    std::bind_front(any_tree::visit_node<type::type_id>, visitor)
+	    [&visitor] (std::any& node) { return any_tree::visit_node(visitor, node); }
     );
     return result ? type::type_id::good_file : type::type_id::undetermined;
 }
@@ -23,7 +23,7 @@ auto semantic_analyzer::function(const visitor& visitor, function_node& node) ->
 
     // push function and parameters to scope
     _scope.add(node.payload().name, func_type);
-    _scope.push();
+    scope_pusher pusher{&_scope};
 
     auto param_name = node.payload().params.begin();
     auto param_type = node.payload().params_type.begin();
