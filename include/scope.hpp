@@ -51,3 +51,21 @@ public:
 	_scopes.back().add(name, value);
     }
 };
+
+template<typename T>
+class scope_pusher {
+    scope_manager<T>* _scope;
+
+public:
+    explicit scope_pusher(scope_manager<T>* scope) : _scope{scope} {
+	_scope->push();
+    }
+
+    ~scope_pusher() { _scope->pop(); }
+
+    scope_pusher()                         = delete;
+    scope_pusher(const scope_pusher<T>&)   = delete;
+    scope_pusher(scope_pusher<T>&&)        = delete;
+    auto operator=(const scope_pusher<T>&) = delete;
+    auto operator=(scope_pusher<T>&&)      = delete;
+};
