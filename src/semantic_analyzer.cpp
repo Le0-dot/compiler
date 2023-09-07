@@ -19,7 +19,7 @@ auto semantic_analyzer::file(const visitor& visitor, file_node& node) -> type::t
 
 auto semantic_analyzer::function(const visitor& visitor, function_node& node) -> type::type_id {
     // get function type
-    type::type_id func_type = _types.id(node.payload().params_type, node.payload().return_type);
+    type::type_id func_type = _types->id(node.payload().params_type, node.payload().return_type);
 
     // push function and parameters to scope
     _scope.add(node.payload().name, func_type);
@@ -46,7 +46,7 @@ auto semantic_analyzer::function(const visitor& visitor, function_node& node) ->
 	    continue;
 	}
 
-	auto cast = _special.cast(tid).get(node.payload().return_type);
+	auto cast = _special->cast(tid).get(node.payload().return_type);
 
 	if(!cast.has_value()) {
 	    return type::type_id::undetermined;
@@ -65,7 +65,7 @@ auto semantic_analyzer::statement(const visitor& visitor, statement_node& node) 
 }
 
 auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& node) -> type::type_id {
-    auto binary_op = _special.binary(node.payload().oper);
+    auto binary_op = _special->binary(node.payload().oper);
 
     type::type_id lhs_type = any_tree::visit_node(visitor, node.child_at(0));
     type::type_id rhs_type = any_tree::visit_node(visitor, node.child_at(1));
@@ -78,8 +78,8 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 	bool should_cast_lhs = operands.first != lhs_type;
 	bool should_cast_rhs = operands.second != rhs_type;
 
-	bool can_cast_lhs = _special.cast(lhs_type).get(operands.first).has_value();
-	bool can_cast_rhs = _special.cast(rhs_type).get(operands.second).has_value();
+	bool can_cast_lhs = _special->cast(lhs_type).get(operands.first).has_value();
+	bool can_cast_rhs = _special->cast(rhs_type).get(operands.second).has_value();
 
 	if((should_cast_lhs && !can_cast_lhs) ||
 	   (should_cast_rhs && !can_cast_rhs)) {
@@ -102,11 +102,11 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 
 auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::type_id {
     type::type_id func_type_id = _scope.get(node.payload().callee).value_or(type::type_id::undetermined);
-    if(!_types.is_function(func_type_id)) {
+    if(!_types->is_function(func_type_id)) {
 	return type::type_id::undetermined;
     }
     
-    const type::function_type& func_type = _types.get_function(func_type_id);
+    const type::function_type& func_type = _types->get_function(func_type_id);
 
     if(node.children().size() != func_type.params().size()) {
 	return type::type_id::undetermined;
@@ -125,7 +125,7 @@ auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::t
 	    continue;
 	}
 
-	auto cast = _special.cast(expr_type).get(*param_iter);
+	auto cast = _special->cast(expr_type).get(*param_iter);
 
 	if(!cast.has_value()) {
 	    return type::type_id::undetermined;
@@ -160,7 +160,7 @@ auto semantic_analyzer::bool_literal(bool_literal_node& node) -> type::type_id {
     return node.payload().type = type::type_id::bool_;
 }
 
-semantic_analyzer::semantic_analyzer(special_functions& special, type::registry& types)
+semantic_analyzer::semantic_analyzer(special_functions* special, type::registry* types)
     : _special{special}
     , _types{types}
 {

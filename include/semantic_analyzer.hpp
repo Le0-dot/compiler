@@ -16,8 +16,9 @@ public:
 
 private:
     scope_manager<type::type_id> _scope{};
-    special_functions& _special;
-    type::registry& _types;
+    special_functions* _special;
+    type::registry* _types;
+
     visitor _visitor;
 
     auto file       (const visitor& visitor, file_node& node)        -> type::type_id;
@@ -35,7 +36,7 @@ private:
     static auto bool_literal    (bool_literal_node& node)     -> type::type_id;
 
 public:
-    semantic_analyzer(special_functions& special, type::registry& types);
+    semantic_analyzer(special_functions* special, type::registry* types);
 
     auto get_visitor() -> visitor& { return _visitor; }
 };

@@ -192,7 +192,7 @@ auto main(int argc, char** argv) -> int {
 
     any_tree::const_visit_node(visitor, tree);
 
-    semantic_analyzer analyzer{functions, types};
+    semantic_analyzer analyzer{&functions, &types};
     std::cout << any_tree::visit_node(analyzer.get_visitor(), tree) << std::endl;
 
     return 0;
