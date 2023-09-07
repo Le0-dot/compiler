@@ -136,7 +136,7 @@ auto insert_implicit_cast(std::any &&node, type::type_id from_type, type::type_i
 	return node;
     }
 
-    implicit_cast_node cast{to_type};
+    implicit_cast_node cast{from_type, to_type};
     cast.child_at(0) = std::move(node);
     return cast;
 }

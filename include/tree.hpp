@@ -36,6 +36,11 @@ struct literal {
     type::type_id type;
 };
 
+struct cast_info {
+    type::type_id from_type;
+    type::type_id to_type;
+};
+
 using file_node        = any_tree::dynamic_node<void>;
 using function_node    = any_tree::dynamic_node<function_info>;
 using statement_node   = any_tree::static_node<statement_info, 1>;
@@ -49,7 +54,7 @@ using char_literal_node     = any_tree::leaf<literal<char>>;
 using string_literal_node   = any_tree::leaf<literal<std::string>>;
 using bool_literal_node     = any_tree::leaf<literal<bool>>;
 
-using implicit_cast_node = any_tree::static_node<type::type_id, 1>;
+using implicit_cast_node = any_tree::static_node<cast_info, 1>;
 
 using json = nlohmann::json;
 
