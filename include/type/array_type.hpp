@@ -30,6 +30,10 @@ class array_type : public type {
 public:
     auto element() const noexcept -> type_id { return _element; }
     auto length() const noexcept -> std::size_t { return _length; }
+
+    constexpr inline auto get()        const noexcept -> llvm::ArrayType* { return static_cast<llvm::ArrayType*>(type::get()); }
+    constexpr inline auto operator*()  const noexcept -> llvm::ArrayType* { return static_cast<llvm::ArrayType*>(type::get()); }
+    constexpr inline auto operator->() const noexcept -> llvm::ArrayType* { return static_cast<llvm::ArrayType*>(type::get()); }
 };
 
 } // namespace type

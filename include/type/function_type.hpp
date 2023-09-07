@@ -30,6 +30,10 @@ class function_type : public type {
 public:
     auto params() const noexcept -> const auto& { return _params; }
     auto return_type() const noexcept -> type_id { return _return; }
+
+    constexpr inline auto get()        const noexcept -> llvm::FunctionType* { return static_cast<llvm::FunctionType*>(type::get()); }
+    constexpr inline auto operator*()  const noexcept -> llvm::FunctionType* { return static_cast<llvm::FunctionType*>(type::get()); }
+    constexpr inline auto operator->() const noexcept -> llvm::FunctionType* { return static_cast<llvm::FunctionType*>(type::get()); }
 };
 
 } // namespace type

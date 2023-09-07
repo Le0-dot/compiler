@@ -27,6 +27,10 @@ class struct_type : public type {
 
 public:
     auto members() const noexcept -> const auto& { return _members; }
+
+    constexpr inline auto get()        const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }
+    constexpr inline auto operator*()  const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }
+    constexpr inline auto operator->() const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }
 };
 
 } // namespace type
