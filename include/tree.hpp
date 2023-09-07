@@ -54,8 +54,8 @@ using implicit_cast_node = any_tree::static_node<type::type_id, 1>;
 using json = nlohmann::json;
 
 class tree_builder {
-    special_functions& _special;
-    type::registry& _types;
+    special_functions* _special;
+    type::registry* _types;
 
     auto file(const json& object)     -> file_node;
     auto function(const json& object) -> function_node;
@@ -74,7 +74,7 @@ class tree_builder {
     auto operator_resolution(std::span<std::any> primaries, std::span<std::string> ops) -> std::any;
 
 public:
-    tree_builder(special_functions& special, type::registry& types)
+    tree_builder(special_functions* special, type::registry* types)
 	: _special{special}
 	, _types{types}
     {}
@@ -90,4 +90,4 @@ public:
     inline auto operator()(const json& object) -> std::any { return file(object); }
 };
 
-auto insert_impicit_cast(std::any&& node, type::type_id to_type) -> implicit_cast_node;
+auto insert_implicit_cast(std::any&& node, type::type_id from_type, type::type_id to_type) -> std::any;

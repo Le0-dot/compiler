@@ -4,6 +4,7 @@
 #include <functional>
 #include <vector>
 
+#include "any_tree/visitor.hpp"
 #include "tree.hpp"
 #include "type/type_id.hpp"
 
@@ -19,7 +20,7 @@ auto tree_builder::function(const json& object) -> function_node {
     function_node node{};
 
     node.payload().name = object["funcName"].template get<std::string>();
-    node.payload().return_type = _types.id(object["funcReturn"].template get<std::string>());
+    node.payload().return_type = _types->id(object["funcReturn"].template get<std::string>());
 
     node.payload().params.reserve(object["funcParams"].size());
     node.payload().params_type.reserve(object["funcParams"].size());
@@ -35,7 +36,7 @@ auto tree_builder::function(const json& object) -> function_node {
 	    object["funcParams"], 
 	    std::back_inserter(node.payload().params_type), 
 	    [this] (const json& object) { 
-		return _types.id(object["varType"].template get<std::string>()); 
+		return _types->id(object["varType"].template get<std::string>()); 
 	    }
     );
 
@@ -55,7 +56,7 @@ auto tree_builder::operator_resolution(std::span<std::any> primaries, std::span<
 	return primaries.front();
     }
 
-    auto op_iter = std::ranges::min_element(ops, {}, [this] (const std::string& oper) { return _special.binary(oper).precedense(); });
+    auto op_iter = std::ranges::min_element(ops, {}, [this] (const std::string& oper) { return _special->binary(oper).precedense(); });
     auto op_pos = op_iter - ops.begin();
 
     binary_expr_node node{*op_iter};
@@ -125,7 +126,16 @@ auto tree_builder::literal(const json& object) -> std::any {
     return handlers[object["tag"]](object["contents"]);
 }
 
-auto insert_impicit_cast(std::any &&node, type::type_id to_type) -> implicit_cast_node {
+auto insert_implicit_cast(std::any &&node, type::type_id from_type, type::type_id to_type) -> std::any {
+    if(type::is_literal(from_type)) {
+	any_tree::children_visitor<void> visitor{
+	    any_tree::make_child_visitor<integer_literal_node>([to_type] (integer_literal_node& node) { node.payload().type = to_type; }),
+	    any_tree::make_child_visitor<floating_literal_node>([to_type] (floating_literal_node& node) { node.payload().type = to_type; }),
+	};
+	any_tree::visit_node(visitor, node);
+	return node;
+    }
+
     implicit_cast_node cast{to_type};
     cast.child_at(0) = std::move(node);
     return cast;

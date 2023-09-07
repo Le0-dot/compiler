@@ -41,4 +41,8 @@ constexpr inline auto valid(const type_id& tid) -> bool {
     return tid != type_id::undetermined;
 }
 
+constexpr inline auto is_literal(type_id tid) -> bool {
+    return type_id::u_literal <= tid && tid < type_id::literal_bound;
+}
+
 } // namespace type

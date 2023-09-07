@@ -54,7 +54,7 @@ auto semantic_analyzer::function(const visitor& visitor, function_node& node) ->
 	    // func_type = type::type_id::undetermined
 	}
 
-	stmt_node.child_at(0) = insert_impicit_cast(std::move(stmt_node.child_at(0)), node.payload().return_type);
+	stmt_node.child_at(0) = insert_implicit_cast(std::move(stmt_node.child_at(0)), tid, node.payload().return_type);
     }
 
     return func_type;
@@ -87,11 +87,11 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 	}
 
 	if(should_cast_lhs && can_cast_lhs) {
-	    insert_impicit_cast(std::move(node.child_at(0)), operands.first);
+	    insert_implicit_cast(std::move(node.child_at(0)), lhs_type, operands.first);
 	}
 
 	if(should_cast_rhs && can_cast_rhs) {
-	    insert_impicit_cast(std::move(node.child_at(1)), operands.second);
+	    insert_implicit_cast(std::move(node.child_at(1)), rhs_type, operands.second);
 	}
 	
 	return func.first;
@@ -131,7 +131,7 @@ auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::t
 	    return type::type_id::undetermined;
 	}
 
-	*expr_iter = insert_impicit_cast(std::move(*expr_iter), *param_iter);
+	*expr_iter = insert_implicit_cast(std::move(*expr_iter), expr_type, *param_iter);
     }
 
     return node.payload().type = func_type.return_type();

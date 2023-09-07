@@ -110,7 +110,7 @@ auto main(int argc, char** argv) -> int {
     types.make_alias("f32",  type::type_id::fp32);
     types.make_alias("f64",  type::type_id::fp64);
 
-    auto tree = tree_builder{functions, types}(json);
+    auto tree = tree_builder{&functions, &types}(json);
 
     std::size_t tab{};
     any_tree::const_children_visitor<void> visitor {
