@@ -127,6 +127,10 @@ auto tree_builder::literal(const json& object) -> std::any {
 }
 
 auto insert_implicit_cast(std::any &&node, type::type_id from_type, type::type_id to_type) -> std::any {
+    if(from_type == to_type) { 
+	return node;
+    }
+
     if(type::is_literal(from_type)) {
 	any_tree::children_visitor<void> visitor{
 	    any_tree::make_child_visitor<integer_literal_node>([to_type] (integer_literal_node& node) { node.payload().type = to_type; }),
