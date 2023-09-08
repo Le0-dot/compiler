@@ -10,6 +10,7 @@
 #include "type/registry.hpp"
 #include "functions.hpp"
 #include "semantic_analyzer.hpp"
+#include "code_generator.hpp"
 
 void tabs(std::size_t n) {
     for(auto i = 0U; i < n; ++i) {
@@ -34,67 +35,7 @@ auto main(int argc, char** argv) -> int {
     special_functions functions{};
 
     default_casts(functions, types);
-
-    functions.new_binary("+", 0);
-    functions.new_binary("-", 0);
-    functions.new_binary("*", 1);
-    functions.new_binary("/", 1);
-
-
-    functions.binary("+").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
-    functions.binary("+").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
-    functions.binary("+").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
-    functions.binary("+").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
-
-    functions.binary("+").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
-    functions.binary("+").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
-    functions.binary("+").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
-    functions.binary("+").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
-
-    functions.binary("+").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
-    functions.binary("+").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
-
-
-    functions.binary("-").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
-    functions.binary("-").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
-    functions.binary("-").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
-    functions.binary("-").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
-
-    functions.binary("-").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
-    functions.binary("-").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
-    functions.binary("-").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
-    functions.binary("-").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
-
-    functions.binary("-").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
-    functions.binary("-").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
-
-
-    functions.binary("*").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
-    functions.binary("*").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
-    functions.binary("*").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
-    functions.binary("*").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
-
-    functions.binary("*").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
-    functions.binary("*").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
-    functions.binary("*").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
-    functions.binary("*").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
-
-    functions.binary("*").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
-    functions.binary("*").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
-
-
-    functions.binary("/").insert(type::type_id::u8, type::type_id::u8, type::type_id::u8);
-    functions.binary("/").insert(type::type_id::u16, type::type_id::u16, type::type_id::u16);
-    functions.binary("/").insert(type::type_id::u32, type::type_id::u32, type::type_id::u32);
-    functions.binary("/").insert(type::type_id::u64, type::type_id::u64, type::type_id::u64);
-
-    functions.binary("/").insert(type::type_id::i8, type::type_id::i8, type::type_id::i8);
-    functions.binary("/").insert(type::type_id::i16, type::type_id::i16, type::type_id::i16);
-    functions.binary("/").insert(type::type_id::i32, type::type_id::i32, type::type_id::i32);
-    functions.binary("/").insert(type::type_id::i64, type::type_id::i64, type::type_id::i64);
-
-    functions.binary("/").insert(type::type_id::fp32, type::type_id::fp32, type::type_id::fp32);
-    functions.binary("/").insert(type::type_id::fp64, type::type_id::fp64, type::type_id::fp64);
+    default_binaries(functions);
 
     types.make_alias("",     type::type_id::void_);
     types.make_alias("bool", type::type_id::bool_);
@@ -156,6 +97,13 @@ auto main(int argc, char** argv) -> int {
 		--tab;
 
 	}),
+	any_tree::make_const_child_visitor<implicit_cast_node>([&visitor, &tab] (const implicit_cast_node& n) {
+		tabs(tab);
+		std::cout << "cast from " << n.payload().from_type << " to " << n.payload().to_type << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(0));
+		--tab;
+	}),
 	any_tree::make_const_child_visitor<identifier_node>([&tab] (const identifier_node& n) {
 		tabs(tab);
 		std::cout << "identifier " << n.payload() << std::endl;
@@ -190,10 +138,10 @@ auto main(int argc, char** argv) -> int {
 	}),
     };
 
-    any_tree::visit_node(visitor, tree);
-
     semantic_analyzer analyzer{&functions, &types};
     std::cout << any_tree::visit_node(analyzer.get_visitor(), tree) << std::endl;
+
+    any_tree::visit_node(visitor, tree);
 
     return 0;
 }

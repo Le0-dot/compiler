@@ -96,3 +96,4 @@ public:
 };
 
 void default_casts(special_functions& functions, type::registry& types);
+void default_binaries(special_functions& functions);
