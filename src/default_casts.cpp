@@ -6,10 +6,8 @@
 
 
 void literal_casts(special_functions& functions) {
-    auto cast = [] (llvm::IRBuilderBase*, llvm::Value* value) { return value; };
-
-    auto add_cast = [&functions, &cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, cast);
+    auto add_cast = [&functions] (type::type_id from_type, type::type_id to_type) {
+	functions.cast(from_type).insert(to_type);
     };
 
     add_cast(type::type_id::u_literal, type::type_id::u8 );
