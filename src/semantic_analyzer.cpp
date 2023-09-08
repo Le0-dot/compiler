@@ -94,6 +94,8 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 	    insert_implicit_cast(std::move(node.child_at(1)), rhs_type, operands.second);
 	}
 	
+	node.payload().lhs = operands.first;
+	node.payload().rhs = operands.second;
 	return func.first;
     }
 

@@ -22,7 +22,8 @@ struct statement_info {
 
 struct binary_expr_info {
     std::string oper;
-    type::type_id type;
+    type::type_id lhs;
+    type::type_id rhs;
 };
 
 struct call_info {
