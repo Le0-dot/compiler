@@ -28,7 +28,7 @@ llvm_map_components_to_libnames(llvm_libs Support Core IRReader)
 
 # Add executable
 
-set(SRC src/main.cpp src/functions.cpp src/tree.cpp src/semantic_analyzer.cpp src/default_casts.cpp src/default_binaries.cpp src/type/registry.cpp)
+set(SRC src/main.cpp src/functions.cpp src/tree.cpp src/semantic_analyzer.cpp src/default_casts.cpp src/default_binaries.cpp src/code_generator.cpp src/type/registry.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC} ${TYPES})
 

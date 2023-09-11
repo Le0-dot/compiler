@@ -12,6 +12,7 @@
 #include "semantic_analyzer.hpp"
 #include "code_generator.hpp"
 
+
 void tabs(std::size_t n) {
     for(auto i = 0U; i < n; ++i) {
 	std::cout << '\t';
@@ -142,6 +143,14 @@ auto main(int argc, char** argv) -> int {
     std::cout << any_tree::visit_node(analyzer.get_visitor(), tree) << std::endl;
 
     any_tree::visit_node(visitor, tree);
+
+    code_generator generator{argv[1], &context, &functions, &types};
+    llvm::Value* func = any_tree::visit_node(generator.get_visitor(), tree);
+    if(func == nullptr) {
+	return 1;
+    }
+
+    func->print(llvm::errs());
 
     return 0;
 }
