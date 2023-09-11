@@ -18,7 +18,7 @@ auto type::registry::id(const std::vector<type_id>& members) noexcept -> type_id
     std::vector<llvm::Type*> members_llvm(members.size());
     std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type); });
 
-    llvm::StructType* anon_struct_t = llvm::StructType::get(_context, members_llvm);
+    llvm::StructType* anon_struct_t = llvm::StructType::get(*_context, members_llvm);
 
     type_id tid{next_id()};
 
@@ -99,7 +99,7 @@ auto type::registry::make_struct(const std::string& name, const std::vector<std:
     std::vector<llvm::Type*> members_llvm(members.size());
     std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type.second); });
 
-    llvm::StructType* struct_t = llvm::StructType::get(_context, members_llvm);
+    llvm::StructType* struct_t = llvm::StructType::get(*_context, members_llvm);
     struct_t->setName(name);
 
     type_id sid{next_id()};
@@ -133,17 +133,17 @@ auto type::registry::is_function(type_id tid) noexcept -> bool {
 
 void type::registry::make_primitives() noexcept {
     _ids[type_id::undetermined] = std::make_unique<type>();
-    _ids[type_id::void_]        = std::make_unique<type>(llvm::Type::getVoidTy(_context));
-    _ids[type_id::bool_]        = std::make_unique<type>(llvm::Type::getInt1Ty(_context));
-    _ids[type_id::char_]        = std::make_unique<type>(llvm::Type::getInt8Ty(_context));
-    _ids[type_id::u8]           = std::make_unique<type>(llvm::Type::getInt8Ty(_context));
-    _ids[type_id::u16]          = std::make_unique<type>(llvm::Type::getInt16Ty(_context));
-    _ids[type_id::u32]          = std::make_unique<type>(llvm::Type::getInt32Ty(_context));
-    _ids[type_id::u64]          = std::make_unique<type>(llvm::Type::getInt64Ty(_context));
-    _ids[type_id::i8]           = std::make_unique<type>(llvm::Type::getInt8Ty(_context));
-    _ids[type_id::i16]          = std::make_unique<type>(llvm::Type::getInt16Ty(_context));
-    _ids[type_id::i32]          = std::make_unique<type>(llvm::Type::getInt32Ty(_context));
-    _ids[type_id::i64]          = std::make_unique<type>(llvm::Type::getInt64Ty(_context));
-    _ids[type_id::fp32]         = std::make_unique<type>(llvm::Type::getFloatTy(_context));
-    _ids[type_id::fp64]         = std::make_unique<type>(llvm::Type::getDoubleTy(_context));
+    _ids[type_id::void_]        = std::make_unique<type>(llvm::Type::getVoidTy(*_context));
+    _ids[type_id::bool_]        = std::make_unique<type>(llvm::Type::getInt1Ty(*_context));
+    _ids[type_id::char_]        = std::make_unique<type>(llvm::Type::getInt8Ty(*_context));
+    _ids[type_id::u8]           = std::make_unique<type>(llvm::Type::getInt8Ty(*_context));
+    _ids[type_id::u16]          = std::make_unique<type>(llvm::Type::getInt16Ty(*_context));
+    _ids[type_id::u32]          = std::make_unique<type>(llvm::Type::getInt32Ty(*_context));
+    _ids[type_id::u64]          = std::make_unique<type>(llvm::Type::getInt64Ty(*_context));
+    _ids[type_id::i8]           = std::make_unique<type>(llvm::Type::getInt8Ty(*_context));
+    _ids[type_id::i16]          = std::make_unique<type>(llvm::Type::getInt16Ty(*_context));
+    _ids[type_id::i32]          = std::make_unique<type>(llvm::Type::getInt32Ty(*_context));
+    _ids[type_id::i64]          = std::make_unique<type>(llvm::Type::getInt64Ty(*_context));
+    _ids[type_id::fp32]         = std::make_unique<type>(llvm::Type::getFloatTy(*_context));
+    _ids[type_id::fp64]         = std::make_unique<type>(llvm::Type::getDoubleTy(*_context));
 }

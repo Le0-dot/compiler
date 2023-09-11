@@ -26,7 +26,7 @@ class registry {
     using array_hash       = hash_for_t<array_key>;
     using function_hash    = hash_for_t<function_key>;
 
-    llvm::LLVMContext& _context;
+    llvm::LLVMContext* _context;
 
     std::unordered_map<type_id, std::unique_ptr<type>> _ids;
     std::unordered_map<std::string, type_id> _names;
@@ -43,7 +43,7 @@ public:
     auto operator=(registry&&) -> registry&      = delete;
     ~registry()				         = default;
 
-    explicit registry(llvm::LLVMContext& context) : _context{context} {
+    explicit registry(llvm::LLVMContext* context) : _context{context} {
 	make_primitives();
     }
 

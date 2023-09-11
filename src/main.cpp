@@ -32,7 +32,7 @@ auto main(int argc, char** argv) -> int {
     json json = json::parse(file);
 
     llvm::LLVMContext context{};
-    type::registry types{context};
+    type::registry types{&context};
     special_functions functions{};
 
     default_casts(functions, types);
