@@ -1,4 +1,7 @@
-#include <utility>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Value.h>
 
 #include "functions.hpp"
 #include "type/type_id.hpp"
@@ -19,9 +22,9 @@ void casts::specialize(type::type_id to_type, inserter_wrapper inserter) {
     _casts[to_type] = std::move(inserter);
 }
 
-auto unary_operator::get(type::type_id operand_type) -> operator_info {
+auto unary_operator::get(type::type_id operand_type) const -> operator_info {
     if(auto iter = _unary.find(operand_type); iter != _unary.end()) {
-	return iter->second;
+	return {iter->second};
     }
     return {};
 }
@@ -31,10 +34,10 @@ void unary_operator::insert(type::type_id operand_type, type::type_id return_typ
 }
 
 void unary_operator::specialize(type::type_id operand_type, inserter_wrapper inserter) {
-    _unary[operand_type].second = std::move(inserter);
+    _unary[operand_type].inserter = std::move(inserter);
 }
 
-auto binary_operator::get(type::type_id left, type::type_id right) -> operator_info {
+auto binary_operator::get(type::type_id left, type::type_id right) const -> operator_info {
     if(auto iter = _binary.find(std::make_pair(left, right)); iter != _binary.end()) {
 	return iter->second;
     }
@@ -46,7 +49,7 @@ void binary_operator::insert(type::type_id left, type::type_id right, type::type
 }
 
 void binary_operator::specialize(type::type_id left, type::type_id right, inserter_wrapper inserter) {
-    _binary[std::make_pair(left, right)].second = std::move(inserter);
+    _binary[std::make_pair(left, right)].inserter = std::move(inserter);
 }
 
 auto special_functions::new_unary(const std::string& oper, std::uint64_t precedense) noexcept -> bool {

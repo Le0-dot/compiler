@@ -105,7 +105,7 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 	    continue;
 	}
 
-	candidates.emplace_back(operands.first, operands.second, func.first);
+	candidates.emplace_back(operands.first, operands.second, func.return_type);
     }
 
     if(candidates.empty()) {
