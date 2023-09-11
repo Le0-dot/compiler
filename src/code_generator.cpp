@@ -38,7 +38,7 @@ auto code_generator::file(const visitor& visitor, const file_node& node) -> llvm
 
 auto code_generator::function(const visitor& visitor, const function_node& node) -> llvm::Value* {
     std::cerr << "function" << std::endl;
-    llvm::FunctionType* func_type = *_types->get_function(node.payload().params_type, node.payload().return_type);
+    llvm::FunctionType* func_type = *_types->make_function(node.payload().params_type, node.payload().return_type);
     llvm::Function* func = llvm::Function::Create(
 	    func_type, 
 	    llvm::Function::ExternalLinkage,
@@ -159,17 +159,17 @@ auto code_generator::identifier(const identifier_node& node) -> llvm::Value* {
 
 auto code_generator::integer_literal(const integer_literal_node& node) -> llvm::Value* {
     std::cerr << "integer_literal" << std::endl;
-    return llvm::ConstantInt::get(*_types->get(node.payload().type), node.payload().value);
+    return llvm::ConstantInt::get(**_types->get(node.payload().type), node.payload().value);
 }
 
 auto code_generator::floating_literal(const floating_literal_node& node) -> llvm::Value* {
     std::cerr << "floating_literal" << std::endl;
-    return llvm::ConstantFP::get(*_types->get(node.payload().type), node.payload().value);
+    return llvm::ConstantFP::get(**_types->get(node.payload().type), node.payload().value);
 }
 
 auto code_generator::char_literal(const char_literal_node& node) -> llvm::Value* {
     std::cerr << "char_literal" << std::endl;
-    return llvm::ConstantInt::get(*_types->get(node.payload().type), node.payload().value);
+    return llvm::ConstantInt::get(**_types->get(node.payload().type), node.payload().value);
 }
 
 auto code_generator::string_literal(const string_literal_node& node) -> llvm::Value* {
@@ -177,7 +177,7 @@ auto code_generator::string_literal(const string_literal_node& node) -> llvm::Va
 
 auto code_generator::bool_literal(const bool_literal_node& node) -> llvm::Value* {
     std::cerr << "bool_literal" << std::endl;
-    return llvm::ConstantInt::get(*_types->get(node.payload().type), static_cast<uint64_t>(node.payload().value));
+    return llvm::ConstantInt::get(**_types->get(node.payload().type), static_cast<uint64_t>(node.payload().value));
 }
 
 code_generator::code_generator(const std::string& module_name, llvm::LLVMContext* context, special_functions* special, type::registry* types) 

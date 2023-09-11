@@ -133,18 +133,17 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 
 auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::type_id {
     type::type_id func_type_id = _scope.get(node.payload().callee).value_or(type::type_id::undetermined);
-    if(!_types->is_function(func_type_id)) {
+    const type::function_type* func_type = _types->get_function(func_type_id);
+    if(func_type == nullptr) {
 	return type::type_id::undetermined;
     }
-    
-    const type::function_type& func_type = _types->get_function(func_type_id);
 
-    if(node.children().size() != func_type.params().size()) {
+    if(node.children().size() != func_type->params().size()) {
 	return type::type_id::undetermined;
     }
 
     auto expr_iter = node.children().begin();
-    auto param_iter = func_type.params().begin();
+    auto param_iter = func_type->params().begin();
     for(; expr_iter != node.children().end(); ++expr_iter, ++param_iter) {
 	type::type_id expr_type = any_tree::visit_node(visitor, *expr_iter);
 
@@ -165,7 +164,7 @@ auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::t
 	*expr_iter = insert_implicit_cast(std::move(*expr_iter), expr_type, *param_iter);
     }
 
-    return node.payload().type = func_type.return_type();
+    return node.payload().type = func_type->return_type();
 }
 
 auto semantic_analyzer::identifier(identifier_node& node) -> type::type_id {

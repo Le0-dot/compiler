@@ -11,15 +11,11 @@
 namespace type {
 
 class type {
-    friend auto std::make_unique<type>(llvm::Type*&&) -> std::unique_ptr<type>;
-    friend auto std::make_unique<type>(llvm::IntegerType*&&) -> std::unique_ptr<type>;
-
     llvm::Type* _type{};
 
-protected:
+public:
     explicit type(llvm::Type* type) noexcept : _type{type} {}
 
-public:
     type()			         = default;
     type(type&&)            	         = delete;
     type(const type&)                    = delete;

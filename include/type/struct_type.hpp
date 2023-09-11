@@ -12,20 +12,18 @@
 namespace type {
 
 class struct_type : public type {
-    friend auto std::make_unique<struct_type>(
-	    llvm::StructType*&, 
-	    const std::vector<std::pair<std::string, 
-	    ::type::type_id>>&
-	) -> std::unique_ptr<struct_type>;
+public:
+    using members_type = std::vector<std::pair<std::string, type_id>>;
 
-    std::vector<std::pair<std::string, type_id>> _members;
+private:
+    members_type _members;
 
+public:
     struct_type(llvm::StructType* stype, std::vector<std::pair<std::string, type_id>>  members)
 	: type{stype}
 	, _members{std::move(members)}
     {}
 
-public:
     auto members() const noexcept -> const auto& { return _members; }
 
     constexpr inline auto get()        const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }

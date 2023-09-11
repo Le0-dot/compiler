@@ -28,12 +28,16 @@ class registry {
 
     llvm::LLVMContext* _context;
 
-    std::unordered_map<type_id, std::unique_ptr<type>> _ids;
     std::unordered_map<std::string, type_id> _names;
+    std::unordered_map<anon_struct_key, type_id, anon_struct_hash> _anon_struct_ids;
+    std::unordered_map<array_key, type_id, array_hash> _array_ids;
+    std::unordered_map<function_key, type_id, function_hash> _function_ids;
 
-    std::unordered_map<anon_struct_key, type_id, anon_struct_hash> _anon_structs;
-    std::unordered_map<array_key, type_id, array_hash> _arrays;
-    std::unordered_map<function_key, type_id, function_hash> _functions;
+    std::unordered_map<type_id, type> _primitives;
+    std::unordered_map<type_id, function_type> _functions;
+    std::unordered_map<type_id, array_type> _arrays;
+    std::unordered_map<type_id, struct_type> _structs;
+    std::unordered_map<type_id, anon_struct_type> _anon_structs;
 
 public:
     registry()                                   = delete;
@@ -47,32 +51,29 @@ public:
 	make_primitives();
     }
 
-    [[nodiscard]] auto id(const std::string& name) noexcept -> type_id { return _names[name]; }
+    [[nodiscard]] auto id(const std::string& name) const noexcept -> type_id;
 
     [[nodiscard]] auto id(const std::vector<type_id>& members)             noexcept -> type_id;
     [[nodiscard]] auto id(const std::vector<type_id>& params, type_id ret) noexcept -> type_id;
     [[nodiscard]] auto id(type_id elements, std::size_t size)              noexcept -> type_id;
 
-    [[nodiscard]] auto get(type_id tid)	            -> type& { return *_ids[tid]; }
-    [[nodiscard]] auto get(const std::string& name) -> type& { return get(id(name)); }
+    [[nodiscard]] auto get(type_id tid)             const noexcept -> const type*;
+    [[nodiscard]] auto get_struct(type_id tid)	    const noexcept -> const struct_type*;
+    [[nodiscard]] auto get_anon_struct(type_id tid) const noexcept -> const anon_struct_type*;
+    [[nodiscard]] auto get_function(type_id tid)    const noexcept -> const function_type*;
+    [[nodiscard]] auto get_array(type_id tid)       const noexcept -> const array_type*;
 
-    [[nodiscard]] auto get_struct(const std::string& name)			     noexcept -> struct_type&;
-    [[nodiscard]] auto get_anon_struct(const std::vector<type_id>& members)          noexcept -> anon_struct_type&;
-    [[nodiscard]] auto get_function(const std::vector<type_id>& params, type_id ret) noexcept -> function_type&;
-    [[nodiscard]] auto get_array(type_id elements, std::size_t size)                 noexcept -> array_type&;
+    [[nodiscard]] auto get(const std::string& name)          const noexcept -> const type*;
+    [[nodiscard]] auto get_struct(const std::string& name)   const noexcept -> const struct_type*;
+    [[nodiscard]] auto get_function(const std::string& name) const noexcept -> const function_type*;
+    [[nodiscard]] auto get_array(const std::string& name)    const noexcept -> const array_type*;
 
-    [[nodiscard]] auto get_struct(type_id tid)	    noexcept -> struct_type&;
-    [[nodiscard]] auto get_anon_struct(type_id tid) noexcept -> anon_struct_type&;
-    [[nodiscard]] auto get_function(type_id tid)    noexcept -> function_type&;
-    [[nodiscard]] auto get_array(type_id tid)       noexcept -> array_type&;
-
-    auto make_struct(const std::string& name, const std::vector<std::pair<std::string, type_id>>& members) noexcept -> type_id;
+    [[nodiscard]] auto make_struct(const std::string& name, const struct_type::members_type& members)          noexcept -> const struct_type&;
+    [[nodiscard]] auto make_anon_struct(const std::vector<type_id>& members)          noexcept -> const anon_struct_type&;
+    [[nodiscard]] auto make_function(const std::vector<type_id>& params, type_id ret) noexcept -> const function_type&;
+    [[nodiscard]] auto make_array(type_id elements, std::size_t size)                 noexcept -> const array_type&;
 
     void make_alias(const std::string& alias, type_id tid) noexcept { _names[alias] = tid; }
-
-    [[nodiscard]] auto is_struct(type_id tid)                       noexcept -> bool;
-    [[nodiscard]] auto is_array(type_id tid)                        noexcept -> bool;
-    [[nodiscard]] auto is_function(type_id tid)                     noexcept -> bool;
 
 private:
     static auto next_id() noexcept -> type_id {

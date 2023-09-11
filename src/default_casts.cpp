@@ -35,7 +35,7 @@ void u_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(to_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(to_type), "cast"));
     };
 
     add_cast(type::type_id::bool_, type::type_id::u8 );
@@ -87,7 +87,7 @@ void i_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(to_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(to_type), "cast"));
     };
 
     add_cast(type::type_id::i8,  type::type_id::i16);
@@ -108,7 +108,7 @@ void fp_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(to_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(to_type), "cast"));
     };
 
     add_cast(type::type_id::fp32, type::type_id::fp64);
@@ -122,7 +122,7 @@ void ui_bool_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(from_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(from_type), "cast"));
     };
 
     add_cast(type::type_id::u8,  type::type_id::bool_);
@@ -144,7 +144,7 @@ void fp_bool_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(from_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(from_type), "cast"));
     };
 
     add_cast(type::type_id::fp32, type::type_id::bool_);
@@ -159,7 +159,7 @@ void u_fp_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(to_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(to_type), "cast"));
     };
 
     add_cast(type::type_id::bool_, type::type_id::fp32);
@@ -186,7 +186,7 @@ void i_fp_casts(special_functions& functions, type::registry& types) {
     };
 
     auto add_cast = [&functions, &types, &get_cast] (type::type_id from_type, type::type_id to_type) {
-	functions.cast(from_type).specialize(to_type, get_cast(*types.get(to_type), "cast"));
+	functions.cast(from_type).specialize(to_type, get_cast(**types.get(to_type), "cast"));
     };
 
     add_cast(type::type_id::i8,  type::type_id::fp32);
