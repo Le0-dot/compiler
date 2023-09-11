@@ -29,7 +29,7 @@ public:
 };
 
 template<typename T>
-struct operator_info {
+struct operator_info_template {
     type::type_id return_type;
     T inserter;
 };
@@ -38,7 +38,7 @@ class unary_operator {
 public:
     using unary_inserter = llvm::Value*(llvm::IRBuilderBase*, llvm::Value*);
     using inserter_wrapper = std::function<unary_inserter>;
-    using operator_info = operator_info<inserter_wrapper>;
+    using operator_info = operator_info_template<inserter_wrapper>;
 
     using variation = std::unordered_map<type::type_id, operator_info>;
 
@@ -62,7 +62,7 @@ class binary_operator {
 public:
     using binary_inserter = llvm::Value*(llvm::IRBuilderBase*, llvm::Value*, llvm::Value*);
     using inserter_wrapper = std::function<binary_inserter>;
-    using operator_info = operator_info<inserter_wrapper>;
+    using operator_info = operator_info_template<inserter_wrapper>;
 
     using variation = std::unordered_map<std::pair<type::type_id, type::type_id>, operator_info, pair_hash<type::type_id, type::type_id>>;
 
