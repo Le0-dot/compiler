@@ -23,7 +23,7 @@ auto type::registry::id(const std::vector<type_id>& members) noexcept -> type_id
     }
 
     std::vector<llvm::Type*> members_llvm(members.size());
-    std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return **get(type); });
+    std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type).value_or(::type::type{}); });
 
     llvm::StructType* anon_struct_t = llvm::StructType::get(*_context, members_llvm);
 
@@ -42,9 +42,9 @@ auto type::registry::id(const std::vector<type_id>& params, type_id ret) noexcep
     }
 
     std::vector<llvm::Type*> params_llvm(params.size());
-    std::ranges::transform(params, params_llvm.begin(), [this] (auto type) { return **get(type); });
+    std::ranges::transform(params, params_llvm.begin(), [this] (auto type) { return *get(type).value_or(::type::type{}); });
 
-    llvm::FunctionType* function_t = llvm::FunctionType::get(**get(ret), params_llvm, false);
+    llvm::FunctionType* function_t = llvm::FunctionType::get(*get(ret).value_or(type{}), params_llvm, false);
 
     type_id fid{next_id()};
 
@@ -60,7 +60,7 @@ auto type::registry::id(type_id elements, std::size_t size) noexcept -> type_id 
 	return iter->second;
     }
 
-    llvm::ArrayType* array_t = llvm::ArrayType::get(**get(elements), size);
+    llvm::ArrayType* array_t = llvm::ArrayType::get(*get(elements).value_or(type{}), size);
 
     type_id aid{next_id()};
 
@@ -70,30 +70,28 @@ auto type::registry::id(type_id elements, std::size_t size) noexcept -> type_id 
     return aid;
 }
 
-auto type::registry::get(type_id tid) const noexcept -> const type* {
+auto type::registry::get(type_id tid) const noexcept -> std::optional<type> {
     if(auto iter = _primitives.find(tid); iter != _primitives.end()) {
-	return &iter->second;
+	return iter->second;
     }
 
-    if(const struct_type *struct_t = get_struct(tid); struct_t != nullptr) {
-        return struct_t;
+    if (const struct_type *struct_t = get_struct(tid); struct_t != nullptr) {
+        return type{*struct_t};
     }
 
-    if(const anon_struct_type *anon_struct_t = get_anon_struct(tid);
-        anon_struct_t != nullptr) {
-        return anon_struct_t;
+    if (const anon_struct_type *anon_struct_t = get_anon_struct(tid); anon_struct_t != nullptr) {
+        return type{*anon_struct_t};
     }
 
-    if(const function_type *function_t = get_function(tid);
-        function_t != nullptr) {
-        return function_t;
+    if (const function_type *function_t = get_function(tid); function_t != nullptr) {
+        return type{*function_t};
     }
 
-    if(const array_type *array_t = get_array(tid); array_t != nullptr) {
-        return array_t;
+    if (const array_type *array_t = get_array(tid); array_t != nullptr) {
+        return type{*array_t};
     }
 
-    return nullptr;
+    return {};
 }
 
 auto type::registry::get_struct(type_id tid) const noexcept -> const struct_type* {
@@ -124,7 +122,7 @@ auto type::registry::get_array(type_id tid) const noexcept -> const array_type* 
     return nullptr;
 }
 
-auto type::registry::get(const std::string& name) const noexcept -> const type* {
+auto type::registry::get(const std::string& name) const noexcept -> std::optional<type> {
     return get(id(name));
 }
 
@@ -142,7 +140,7 @@ auto type::registry::get_array(const std::string& name) const noexcept -> const 
 
 auto type::registry::make_struct(const std::string& name, const struct_type::members_type& members) noexcept -> const struct_type& {
     std::vector<llvm::Type*> members_llvm(members.size());
-    std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return **get(type.second); });
+    std::ranges::transform(members, members_llvm.begin(), [this] (auto type) { return *get(type.second).value_or(::type::type{}); });
 
     llvm::StructType* struct_t = llvm::StructType::get(*_context, members_llvm);
     struct_t->setName(name);

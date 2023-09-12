@@ -6,29 +6,37 @@
 
 #include <llvm/IR/DerivedTypes.h>
 
-#include "type.hpp"
+#include "type_id.hpp"
 
 
 namespace type {
 
-class struct_type : public type {
+class struct_type {
 public:
     using members_type = std::vector<std::pair<std::string, type_id>>;
 
 private:
-    members_type _members;
+    llvm::StructType* _type{};
+    members_type _members{};
 
 public:
-    struct_type(llvm::StructType* stype, std::vector<std::pair<std::string, type_id>>  members)
-	: type{stype}
+    struct_type(llvm::StructType* type, std::vector<std::pair<std::string, type_id>> members)
+	: _type{type}
 	, _members{std::move(members)}
     {}
 
+    struct_type()			               = default;
+    struct_type(const struct_type&)                    = delete;
+    struct_type(struct_type&&)            	       = delete;
+    auto operator=(const struct_type&) -> struct_type& = delete;
+    auto operator=(struct_type&&) -> struct_type&      = delete;
+    ~struct_type()                                     = default;
+
     auto members() const noexcept -> const auto& { return _members; }
 
-    constexpr inline auto get()        const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }
-    constexpr inline auto operator*()  const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }
-    constexpr inline auto operator->() const noexcept -> llvm::StructType* { return static_cast<llvm::StructType*>(type::get()); }
+    constexpr inline auto get()        const noexcept -> llvm::StructType* { return _type; }
+    constexpr inline auto operator*()  const noexcept -> llvm::StructType* { return _type; }
+    constexpr inline auto operator->() const noexcept -> llvm::StructType* { return _type; }
 };
 
 } // namespace type

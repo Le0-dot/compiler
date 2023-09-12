@@ -3,6 +3,7 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <optional>
 
 #include <llvm/IR/LLVMContext.h>
 
@@ -57,21 +58,21 @@ public:
     [[nodiscard]] auto id(const std::vector<type_id>& params, type_id ret) noexcept -> type_id;
     [[nodiscard]] auto id(type_id elements, std::size_t size)              noexcept -> type_id;
 
-    [[nodiscard]] auto get(type_id tid)             const noexcept -> const type*;
+    [[nodiscard]] auto get(type_id tid)             const noexcept -> std::optional<type>;
     [[nodiscard]] auto get_struct(type_id tid)	    const noexcept -> const struct_type*;
     [[nodiscard]] auto get_anon_struct(type_id tid) const noexcept -> const anon_struct_type*;
     [[nodiscard]] auto get_function(type_id tid)    const noexcept -> const function_type*;
     [[nodiscard]] auto get_array(type_id tid)       const noexcept -> const array_type*;
 
-    [[nodiscard]] auto get(const std::string& name)          const noexcept -> const type*;
+    [[nodiscard]] auto get(const std::string& name)          const noexcept -> std::optional<type>;
     [[nodiscard]] auto get_struct(const std::string& name)   const noexcept -> const struct_type*;
     [[nodiscard]] auto get_function(const std::string& name) const noexcept -> const function_type*;
     [[nodiscard]] auto get_array(const std::string& name)    const noexcept -> const array_type*;
 
-    [[nodiscard]] auto make_struct(const std::string& name, const struct_type::members_type& members)          noexcept -> const struct_type&;
-    [[nodiscard]] auto make_anon_struct(const std::vector<type_id>& members)          noexcept -> const anon_struct_type&;
-    [[nodiscard]] auto make_function(const std::vector<type_id>& params, type_id ret) noexcept -> const function_type&;
-    [[nodiscard]] auto make_array(type_id elements, std::size_t size)                 noexcept -> const array_type&;
+    [[nodiscard]] auto make_struct(const std::string& name, const struct_type::members_type& members) noexcept -> const struct_type&;
+    [[nodiscard]] auto make_anon_struct(const std::vector<type_id>& members)                          noexcept -> const anon_struct_type&;
+    [[nodiscard]] auto make_function(const std::vector<type_id>& params, type_id ret)                 noexcept -> const function_type&;
+    [[nodiscard]] auto make_array(type_id elements, std::size_t size)                                 noexcept -> const array_type&;
 
     void make_alias(const std::string& alias, type_id tid) noexcept { _names[alias] = tid; }
 
