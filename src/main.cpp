@@ -145,12 +145,11 @@ auto main(int argc, char** argv) -> int {
     any_tree::visit_node(visitor, tree);
 
     code_generator generator{argv[1], &context, &functions, &types};
-    llvm::Value* func = any_tree::visit_node(generator.get_visitor(), tree);
-    if(func == nullptr) {
+    if(llvm::Value* func = any_tree::visit_node(generator.get_visitor(), tree); func == nullptr) {
 	return 1;
     }
 
-    func->print(llvm::errs());
+    generator.get_module().print(llvm::errs(), nullptr);
 
     return 0;
 }

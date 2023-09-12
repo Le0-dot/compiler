@@ -47,4 +47,5 @@ public:
     code_generator(const std::string& module_name, llvm::LLVMContext* context, special_functions* special, type::registry* types);
 
     auto get_visitor() -> visitor& { return _visitor; }
+    auto get_module() -> llvm::Module& { return _module; };
 };
