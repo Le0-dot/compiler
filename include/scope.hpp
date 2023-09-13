@@ -11,18 +11,24 @@
 #include "type/type_id.hpp"
 
 
-template<typename T>
-using remove_specifiers = std::remove_pointer_t<std::remove_cvref_t<T>>;
-
 template<typename T, typename F = T>
-requires std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_constructible_v<F>
-class scope {
-    std::unordered_map<std::string, T> _symbols{};
+requires std::is_trivially_copy_constructible_v<T> &&
+    (std::is_trivially_copy_constructible_v<F> || std::same_as<F, void>)
+class scope : public scope<T, void> {
     F _function{};
 
 public:
     explicit scope(F function) : _function{function} {}
 
+    auto function() const noexcept -> F { return _function; }
+};
+
+template<typename T>
+requires std::is_trivially_copy_constructible_v<T>
+class scope<T, void> {
+    std::unordered_map<std::string, T> _symbols{};
+
+public:
     auto get(const std::string& name) noexcept -> std::optional<T> {
 	if(auto iter = _symbols.find(name); iter != _symbols.end()) {
 	    return iter->second;
@@ -33,8 +39,6 @@ public:
     void add(const std::string& name, T value) noexcept {
 	_symbols[name] = value;
     }
-
-    auto function() const noexcept -> F { return _function; }
 };
 
 template<typename T, typename F = T>
