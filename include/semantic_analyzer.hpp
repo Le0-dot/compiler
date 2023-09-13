@@ -21,11 +21,13 @@ private:
 
     visitor _visitor;
 
-    auto file       (const visitor& visitor, file_node& node)        -> type::type_id;
-    auto function   (const visitor& visitor, function_node& node)    -> type::type_id;
-    auto statement  (const visitor& visitor, statement_node& node)   -> type::type_id;
-    auto binary_expr(const visitor& visitor, binary_expr_node& node) -> type::type_id;
-    auto call       (const visitor& visitor, call_node& node)        -> type::type_id;
+    auto file            (const visitor& visitor, file_node& node)             -> type::type_id;
+    auto function        (const visitor& visitor, function_node& node)         -> type::type_id;
+    auto return_statement(const visitor& visitor, return_statement_node& node) -> type::type_id;
+    auto let_statement   (const visitor& visitor, let_statement_node& node)    -> type::type_id;
+    auto var_def         (const visitor& visitor, var_def_node& node)          -> type::type_id;
+    auto binary_expr     (const visitor& visitor, binary_expr_node& node)      -> type::type_id;
+    auto call            (const visitor& visitor, call_node& node)             -> type::type_id;
 
     auto identifier (identifier_node& node) -> type::type_id;
 

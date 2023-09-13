@@ -1,13 +1,16 @@
 #include <iostream>
+#include <math.h>
 #include <ranges>
 #include <algorithm>
 #include <tuple>
 
 #include <any_tree.hpp>
 
+#include "any_tree/visitor.hpp"
 #include "functions.hpp"
 #include "semantic_analyzer.hpp"
 #include "tree.hpp"
+#include "type/type.hpp"
 #include "type/type_id.hpp"
 
 
@@ -26,7 +29,7 @@ auto semantic_analyzer::function(const visitor& visitor, function_node& node) ->
 
     // push function and parameters to scope
     _scope.add(node.payload().name, func_type);
-    scope_pusher pusher{&_scope};
+    scope_pusher pusher{&_scope, func_type};
 
     auto param_name = node.payload().params.begin();
     auto param_type = node.payload().params_type.begin();
@@ -35,36 +38,91 @@ auto semantic_analyzer::function(const visitor& visitor, function_node& node) ->
     }
 
     // visit statements and analyze them
-    for(auto& stmt: node.children()) {
-	type::type_id tid = any_tree::visit_node(visitor, stmt);
-
-	if(!type::valid(tid)) {
-	    return type::type_id::undetermined;
-	}
-
-	auto& stmt_node = std::any_cast<statement_node&>(stmt);
-	bool invalid_return = stmt_node.payload().is_return && tid != node.payload().return_type;
-
-	if(!invalid_return) {
-	    continue;
-	}
-
-	auto cast = _special->cast(tid).get(node.payload().return_type);
-
-	if(!cast.has_value()) {
-	    return type::type_id::undetermined;
-	    // or
-	    // func_type = type::type_id::undetermined
-	}
-
-	stmt_node.child_at(0) = insert_implicit_cast(std::move(stmt_node.child_at(0)), tid, node.payload().return_type);
+    bool result = std::ranges::all_of(
+	    node.children(),
+	    type::valid,
+	    [&visitor] (std::any& child) { return any_tree::visit_node(visitor, child); }
+    );
+    if(!result) {
+	return type::type_id::undetermined;
     }
 
     return func_type;
 }
 
-auto semantic_analyzer::statement(const visitor& visitor, statement_node& node) -> type::type_id {
-    return any_tree::visit_node(visitor, node.child_at(0));
+auto semantic_analyzer::return_statement(const visitor& visitor, return_statement_node& node) -> type::type_id {
+    type::type_id stmt_type =  any_tree::visit_node(visitor, node.child_at(0));
+    type::type_id func_return = _types->get_function(_scope.function())->return_type();
+    
+    if(stmt_type == func_return) {
+	return stmt_type;
+    }
+
+    auto cast = _special->cast(stmt_type).get(func_return);
+    if(!cast.has_value()) {
+	return type::type_id::undetermined;
+    }
+
+    node.child_at(0) = insert_implicit_cast(std::move(node.child_at(0)), stmt_type, func_return);
+    return func_return;
+}
+
+auto semantic_analyzer::let_statement(const visitor& visitor, let_statement_node& node) -> type::type_id {
+    bool result = std::ranges::all_of(
+	    node.children(),
+	    type::valid,
+	    [&visitor] (std::any& child) { return any_tree::visit_node(visitor, child); }
+    );
+    return result ? type::type_id::good_var_def : type::type_id::undetermined;
+}
+
+auto var_def_with_expr(const semantic_analyzer::visitor& visitor, var_def_node& node, special_functions* special) -> type::type_id {
+    type::type_id expr_type = any_tree::visit_node(visitor, node.child_at(0));
+
+    if(!type::valid(expr_type)) {
+	return type::type_id::undetermined;
+    }
+
+    if(node.payload().type == type::type_id::unset) {
+	return node.payload().type = expr_type;
+    }
+
+    if(node.payload().type == expr_type) {
+	return expr_type;
+    }
+
+    auto cast = special->cast(expr_type).get(node.payload().type);
+    if(!cast.has_value()) {
+	return type::type_id::undetermined;
+    }
+
+    node.child_at(0) = insert_implicit_cast(std::move(node.child_at(0)), expr_type, node.payload().type);
+    return node.payload().type;
+}
+
+auto var_def_without_expr(var_def_node& node) -> type::type_id {
+    if(!type::valid(node.payload().type)) {
+	return type::type_id::undetermined;
+    }
+    return node.payload().type;
+}
+
+
+auto semantic_analyzer::var_def(const visitor& visitor, var_def_node& node) -> type::type_id {
+    type::type_id type{};
+
+    if(node.children().empty()) {
+	type = var_def_without_expr(node);
+    } else {
+	type = var_def_with_expr(visitor, node, _special);
+    }
+
+    if(!type::valid(type)) {
+	return type::type_id::undetermined;
+    }
+
+    _scope.add(node.payload().name, node.payload().type);
+    return type::type_id::good_var_def;
 }
 
 auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& node) -> type::type_id {
@@ -195,12 +253,14 @@ semantic_analyzer::semantic_analyzer(special_functions* special, type::registry*
     , _types{types}
 {
     _visitor = {
-	any_tree::make_child_visitor<file_node>            ([this] (file_node& node)        { return file(_visitor, node); }),
-	any_tree::make_child_visitor<function_node>        ([this] (function_node& node)    { return function(_visitor, node); }),
-	any_tree::make_child_visitor<statement_node>       ([this] (statement_node& node)   { return statement(_visitor, node); }),
-	any_tree::make_child_visitor<binary_expr_node>     ([this] (binary_expr_node& node) { return binary_expr(_visitor, node); }),
-	any_tree::make_child_visitor<call_node>            ([this] (call_node& node)        { return call(_visitor, node); }),
-	any_tree::make_child_visitor<identifier_node>      ([this] (identifier_node& node)  { return identifier(node); }),
+	any_tree::make_child_visitor<file_node>            ([this] (file_node& node)             { return file(_visitor, node); }),
+	any_tree::make_child_visitor<function_node>        ([this] (function_node& node)         { return function(_visitor, node); }),
+	any_tree::make_child_visitor<return_statement_node>([this] (return_statement_node& node) { return return_statement(_visitor, node); }),
+	any_tree::make_child_visitor<let_statement_node>   ([this] (let_statement_node& node)    { return let_statement(_visitor, node); }),
+	any_tree::make_child_visitor<var_def_node>         ([this] (var_def_node& node)          { return var_def(_visitor, node); }),
+	any_tree::make_child_visitor<binary_expr_node>     ([this] (binary_expr_node& node)      { return binary_expr(_visitor, node); }),
+	any_tree::make_child_visitor<call_node>            ([this] (call_node& node)             { return call(_visitor, node); }),
+	any_tree::make_child_visitor<identifier_node>      ([this] (identifier_node& node)       { return identifier(node); }),
 	any_tree::make_child_visitor<integer_literal_node> (integer_literal ),
 	any_tree::make_child_visitor<floating_literal_node>(floating_literal),
 	any_tree::make_child_visitor<char_literal_node>    (char_literal    ),
