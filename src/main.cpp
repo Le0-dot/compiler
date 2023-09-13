@@ -57,7 +57,7 @@ auto main(int argc, char** argv) -> int {
     std::size_t tab{};
     any_tree::const_children_visitor<void> visitor {
 	any_tree::make_const_child_visitor<file_node>([&visitor, &tab] (const file_node& n) { 
-		std::cout << "file" << std::endl;
+		std::cout << "file1" << std::endl;
 		++tab;
 		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 	}),
@@ -77,12 +77,30 @@ auto main(int argc, char** argv) -> int {
 		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 		--tab;
 	}),
-	any_tree::make_const_child_visitor<statement_node>([&visitor, &tab] (const statement_node& n) {
+	any_tree::make_const_child_visitor<return_statement_node>([&visitor, &tab] (const return_statement_node& n) {
 		tabs(tab);
-		std::cout << (n.payload().is_return ? "return " : "") << "statement" << std::endl;
+		std::cout << "return statement" << std::endl;
 		++tab;
 		any_tree::visit_node(visitor, n.child_at(0));
 		--tab;
+	}),
+	any_tree::make_const_child_visitor<let_statement_node>([&visitor, &tab] (const let_statement_node& n) {
+		tabs(tab);
+		std::cout << "let statement" << std::endl;
+		++tab;
+		for(const auto& child: n.children()) {
+		    any_tree::visit_node(visitor, child);
+		}
+		--tab;
+	}),
+	any_tree::make_const_child_visitor<var_def_node>([&visitor, &tab] (const var_def_node& n) {
+		tabs(tab);
+		std::cout << n.payload().name << " " << n.payload().type << std::endl;
+		if(!n.children().empty()) {
+		    ++tab;
+		    any_tree::visit_node(visitor, n.child_at(0));
+		    --tab;
+		}
 	}),
 	any_tree::make_const_child_visitor<binary_expr_node>([&visitor, &tab] (const binary_expr_node& n) {
 		tabs(tab);

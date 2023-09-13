@@ -1,7 +1,9 @@
 #pragma once 
 
 #include <any_tree.hpp>
+#include <functional>
 #include <nlohmann/json.hpp>
+#include <ratio>
 
 #include "any_tree/node.hpp"
 #include "type/type_id.hpp"
@@ -16,8 +18,9 @@ struct function_info {
     type::type_id return_type;
 };
 
-struct statement_info {
-    bool is_return;
+struct var_def_info {
+    std::string name;
+    type::type_id type;
 };
 
 struct binary_expr_info {
@@ -42,12 +45,14 @@ struct cast_info {
     type::type_id to_type;
 };
 
-using file_node        = any_tree::dynamic_node<void>;
-using function_node    = any_tree::dynamic_node<function_info>;
-using statement_node   = any_tree::static_node<statement_info, 1>;
-using binary_expr_node = any_tree::static_node<binary_expr_info, 2>;
-using call_node        = any_tree::dynamic_node<call_info>;
-using identifier_node  = any_tree::leaf<std::string>;
+using file_node             = any_tree::dynamic_node<void>;
+using function_node         = any_tree::dynamic_node<function_info>;
+using return_statement_node = any_tree::static_node<void, 1>;
+using let_statement_node    = any_tree::dynamic_node<void, 1>;
+using var_def_node          = any_tree::dynamic_node<var_def_info>;
+using binary_expr_node      = any_tree::static_node<binary_expr_info, 2>;
+using call_node             = any_tree::dynamic_node<call_info>;
+using identifier_node       = any_tree::leaf<std::string>;
 // literals
 using integer_literal_node  = any_tree::leaf<literal<std::uint64_t>>;
 using floating_literal_node = any_tree::leaf<literal<double>>;
@@ -63,19 +68,25 @@ class tree_builder {
     special_functions* _special;
     type::registry* _types;
 
-    auto file(const json& object)     -> file_node;
-    auto function(const json& object) -> function_node;
-    auto stmt(const json& object)     -> statement_node;
-    auto expr(const json& object)     -> std::any;
-    auto primary(const json& object)  -> std::any;
-    auto call(const json& object)     -> call_node;
+    auto file(const json& object)        -> file_node;
+    auto function(const json& object)    -> function_node;
+    auto stmt(const json& object)        -> std::any;
+    auto return_stmt(const json& object) -> return_statement_node;
+    auto let_stmt(const json& object)    -> let_statement_node;
+    auto var_def(const json& object)     -> var_def_node;
+    auto expr(const json& object)        -> std::any;
+    auto primary(const json& object)     -> std::any;
+    auto call(const json& object)        -> call_node;
 
     static auto literal(const json& object)  -> std::any;
 
-    inline auto function_hander() { return std::bind_front(&tree_builder::function, this); }
-    inline auto stmt_hander()     { return std::bind_front(&tree_builder::stmt, this); }
-    inline auto expr_hander()     { return std::bind_front(&tree_builder::expr, this); }
-    inline auto call_hander()     { return std::bind_front(&tree_builder::call, this); }
+    inline auto function_hander()    { return std::bind_front(&tree_builder::function, this); }
+    inline auto stmt_hander()        { return std::bind_front(&tree_builder::stmt, this); }
+    inline auto return_stmt_hander() { return std::bind_front(&tree_builder::return_stmt, this); }
+    inline auto let_stmt_hander()    { return std::bind_front(&tree_builder::let_stmt, this); }
+    inline auto var_def_hander()     { return std::bind_front(&tree_builder::var_def, this); }
+    inline auto expr_hander()        { return std::bind_front(&tree_builder::expr, this); }
+    inline auto call_hander()        { return std::bind_front(&tree_builder::call, this); }
 
     auto operator_resolution(std::span<std::any> primaries, std::span<std::string> ops) -> std::any;
 

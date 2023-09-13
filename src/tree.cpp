@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <iostream>
+#include <iterator>
 #include <unordered_map>
 #include <functional>
 #include <vector>
@@ -30,14 +30,14 @@ auto tree_builder::function(const json& object) -> function_node {
 	    object["funcParams"], 
 	    std::back_inserter(node.payload().params), 
 	    [] (const json& object) { 
-		return object["varName"].template get<std::string>(); 
+		return object["argName"].template get<std::string>(); 
 	    }
     );
     std::ranges::transform(
 	    object["funcParams"], 
 	    std::back_inserter(node.payload().params_type), 
 	    [this] (const json& object) { 
-		return _types->id(object["varType"].template get<std::string>()); 
+		return _types->id(object["argType"].template get<std::string>()); 
 	    }
     );
 
@@ -46,9 +46,45 @@ auto tree_builder::function(const json& object) -> function_node {
     return node;
 }
 
-auto tree_builder::stmt(const json& object) -> statement_node {
-    statement_node node{object["return"].template get<bool>()};
-    node.children()[0] = expr(object["expr"]);
+auto tree_builder::stmt(const json& object) -> std::any {
+    static std::unordered_map<std::string, std::function<std::any(const json&)>> handlers{
+	{"IgnoreResultStmt",       expr_hander()},
+	{"ReturnStmt",             return_stmt_hander()},
+	{"VariableDefinitionStmt", let_stmt_hander()},
+    };
+
+    return handlers[object["tag"]](object["contents"]);
+}
+
+auto tree_builder::return_stmt(const json& object) -> return_statement_node {
+    return_statement_node node{}; 
+    node.child_at(0) = expr(object); 
+    return node;
+}
+
+auto tree_builder::let_stmt(const json& object) -> let_statement_node {
+    let_statement_node node{};
+
+    std::ranges::transform(object, std::back_inserter(node.children()), var_def_hander());
+
+    return node;
+}
+
+auto tree_builder::var_def(const json& object) -> var_def_node {
+    var_def_node node{};
+
+    node.payload().name = object["varName"].template get<std::string>();
+
+    if(const json& type = object["varType"]; type.is_null()) {
+	node.payload().type = type::type_id::unset;
+    } else {
+	node.payload().type = _types->id(type.template get<std::string>());
+    }
+
+    if(const json& value = object["varValue"]; !value.is_null()) {
+	node.children().reserve(1);
+	node.children().emplace_back(expr(object["varValue"]));
+    }
     return node;
 }
 
