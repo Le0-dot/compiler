@@ -137,23 +137,23 @@ auto main(int argc, char** argv) -> int {
 
 	any_tree::make_const_child_visitor<integer_literal_node>([&tab] (const integer_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload().value << std::endl;
+		std::cout << "literal " << n.payload().value << ' ' << n.payload().type << std::endl;
 	}),
 	any_tree::make_const_child_visitor<floating_literal_node>([&tab] (const floating_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload().value << std::endl;
+		std::cout << "literal " << n.payload().value << ' ' << n.payload().type << std::endl;
 	}),
 	any_tree::make_const_child_visitor<char_literal_node>([&tab] (const char_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload().value << std::endl;
+		std::cout << "literal " << n.payload().value << ' ' << n.payload().type << std::endl;
 	}),
 	any_tree::make_const_child_visitor<string_literal_node>([&tab] (const string_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload().value << std::endl;
+		std::cout << "literal " << n.payload().value << ' ' << n.payload().type << std::endl;
 	}),
 	any_tree::make_const_child_visitor<bool_literal_node>([&tab] (const bool_literal_node& n) {
 		tabs(tab);
-		std::cout << "literal " << n.payload().value << std::endl;
+		std::cout << "literal " << n.payload().value << ' ' << n.payload().type << std::endl;
 	}),
     };
 
