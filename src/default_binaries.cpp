@@ -157,10 +157,11 @@ void fp_division(special_functions& functions) {
 }
 
 void default_binaries(special_functions& functions) {
-    functions.new_binary("+", 0);
-    functions.new_binary("-", 0);
-    functions.new_binary("*", 1);
-    functions.new_binary("/", 1);
+    functions.new_binary("=", 0);
+    functions.new_binary("+", 1);
+    functions.new_binary("-", 1);
+    functions.new_binary("*", 2);
+    functions.new_binary("/", 2);
 
     ui_addition(functions);
     fp_addition(functions);

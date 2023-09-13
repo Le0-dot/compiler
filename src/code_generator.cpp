@@ -5,6 +5,8 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
 
@@ -70,7 +72,6 @@ auto code_generator::function(const visitor& visitor, const function_node& node)
 
 	_scope.add(std::string{arg.getName()}, inst);
     }
-    std::cout << "allocated args" << std::endl;
 
     node.for_each_child([&visitor] (const std::any& node) { any_tree::visit_node(visitor, node); });
 
@@ -150,6 +151,14 @@ auto code_generator::binary_expr(const visitor& visitor, const binary_expr_node&
 	return nullptr;
     }
 
+    if(node.payload().oper == "=") {
+	if(auto *load = dyn_cast<llvm::LoadInst>(lhs); load != nullptr) {
+	    lhs = load->getPointerOperand();
+	    //load->removeFromParent();
+	}
+	return _builder.CreateStore(rhs, lhs);
+    }
+
     auto bin_operator = _special->binary(node.payload().oper).get(node.payload().lhs, node.payload().rhs);
     if(!type::valid(bin_operator.return_type)) {
 	std::cout << "invalid operator return type" << std::endl;
@@ -211,13 +220,13 @@ auto code_generator::implicit_cast(const visitor& visitor, const implicit_cast_n
 auto code_generator::identifier(const identifier_node& node) -> llvm::Value* {
     std::cout << "identifier" << std::endl;
 
-    const auto& alloca = _scope.get(node.payload()).value_or(nullptr);
+    llvm::AllocaInst* inst = _scope.get(node.payload()).value_or(nullptr);
 
-    if(alloca == nullptr) {
+    if(inst == nullptr) {
 	return nullptr;
     }
 
-    return _builder.CreateLoad(alloca->getAllocatedType(), alloca, node.payload());
+    return _builder.CreateLoad(inst->getAllocatedType(), inst, node.payload());
 }
 
 auto code_generator::integer_literal(const integer_literal_node& node) -> llvm::Value* {

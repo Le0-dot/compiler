@@ -131,6 +131,19 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
     type::type_id lhs_type = any_tree::visit_node(visitor, node.child_at(0));
     type::type_id rhs_type = any_tree::visit_node(visitor, node.child_at(1));
 
+    if(node.payload().oper == "=") {
+	if(lhs_type == rhs_type) {
+	    return lhs_type;
+	}
+
+	if(auto cast = _special->cast(rhs_type).get(lhs_type); cast.has_value()) {
+	    node.child_at(1) = insert_implicit_cast(std::move(node.child_at(1)), rhs_type, lhs_type);
+	    return lhs_type;
+	}
+	
+	return type::type_id::undetermined;
+    }
+
     // try find operator with exact type definition
     if(const auto& [type, _] = binary_op.get(lhs_type, rhs_type); type::valid(type)) {
 	node.payload().lhs = lhs_type;
