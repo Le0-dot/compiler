@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <ranges>
 #include <optional>
@@ -11,11 +12,17 @@
 
 
 template<typename T>
-requires std::is_trivially_copy_constructible_v<T>
+using remove_specifiers = std::remove_pointer_t<std::remove_cvref_t<T>>;
+
+template<typename T, typename F = T>
+requires std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_constructible_v<F>
 class scope {
     std::unordered_map<std::string, T> _symbols{};
+    F _function{};
 
 public:
+    explicit scope(F function) : _function{function} {}
+
     auto get(const std::string& name) noexcept -> std::optional<T> {
 	if(auto iter = _symbols.find(name); iter != _symbols.end()) {
 	    return iter->second;
@@ -26,16 +33,24 @@ public:
     void add(const std::string& name, T value) noexcept {
 	_symbols[name] = value;
     }
+
+    auto function() const noexcept -> F { return _function; }
 };
 
-template<typename T>
+template<typename T, typename F = T>
 class scope_manager {
-    std::vector<scope<T>> _scopes{};
+    std::vector<scope<T, F>> _scopes{};
 
 public:
-    scope_manager() { push(); }
+    scope_manager() { push({}); }
 
-    void push() noexcept { _scopes.emplace_back(); }
+    auto begin()       { return _scopes.rbegin(); }
+    auto begin() const { return _scopes.rcbegin(); }
+
+    auto end()       { return _scopes.rend(); }
+    auto end() const { return _scopes.rcend(); }
+
+    void push(F function) noexcept { _scopes.emplace_back(function); }
     void pop() noexcept { _scopes.pop_back(); }
 
     auto get(const std::string& name) noexcept -> std::optional<T> {
@@ -50,22 +65,24 @@ public:
     void add(const std::string& name, T value) noexcept {
 	_scopes.back().add(name, value);
     }
+
+    auto function() const noexcept -> F { return _scopes.back().function(); }
 };
 
-template<typename T>
+template<typename T, typename F = T>
 class scope_pusher {
-    scope_manager<T>* _scope;
+    scope_manager<T, F>* _scope;
 
 public:
-    explicit scope_pusher(scope_manager<T>* scope) : _scope{scope} {
-	_scope->push();
+    explicit scope_pusher(scope_manager<T, F>* scope, F function) : _scope{scope} {
+	_scope->push(function);
     }
 
     ~scope_pusher() { _scope->pop(); }
 
-    scope_pusher()                         = delete;
-    scope_pusher(const scope_pusher<T>&)   = delete;
-    scope_pusher(scope_pusher<T>&&)        = delete;
-    auto operator=(const scope_pusher<T>&) = delete;
-    auto operator=(scope_pusher<T>&&)      = delete;
+    scope_pusher()                            = delete;
+    scope_pusher(const scope_pusher<T, F>&)   = delete;
+    scope_pusher(scope_pusher<T, F>&&)        = delete;
+    auto operator=(const scope_pusher<T, F>&) = delete;
+    auto operator=(scope_pusher<T, F>&&)      = delete;
 };
