@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include <iostream>
+#include <llvm/IR/Argument.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -13,8 +14,12 @@
 #include "type/type_id.hpp"
 
 
+auto entry_builder(llvm::Function* func) -> llvm::IRBuilder<> {
+    return llvm::IRBuilder<>{&func->getEntryBlock(), func->getEntryBlock().begin()};
+}
+
 auto code_generator::file(const visitor& visitor, const file_node& node) -> llvm::Value* {
-    std::cerr << "file" << std::endl;
+    std::cout << "file" << std::endl;
 
     std::vector<llvm::Value*> functions{};
     functions.reserve(node.children_size());
@@ -30,7 +35,7 @@ auto code_generator::file(const visitor& visitor, const file_node& node) -> llvm
 	    [] (llvm::Value* value) { return value == nullptr; }
     );
     if(invalid_functions) {
-	std::cerr << "invalid function argument" << std::endl;
+	std::cout << "invalid function argument" << std::endl;
 	return nullptr;
     }
 
@@ -38,7 +43,7 @@ auto code_generator::file(const visitor& visitor, const file_node& node) -> llvm
 }
 
 auto code_generator::function(const visitor& visitor, const function_node& node) -> llvm::Value* {
-    std::cerr << "function" << std::endl;
+    std::cout << "function" << std::endl;
     llvm::FunctionType* func_type = *_types->make_function(node.payload().params_type, node.payload().return_type);
     llvm::Function* func = llvm::Function::Create(
 	    func_type, 
@@ -47,20 +52,27 @@ auto code_generator::function(const visitor& visitor, const function_node& node)
 	    _module
     );
 
-    _scope.add(node.payload().name, func);
-    scope_pusher pusher{&_scope};
-
-    auto arg_iter = func->arg_begin();
-    auto param_iter = node.payload().params.begin();
-    while(arg_iter != func->arg_end()) {
-	arg_iter->setName(*param_iter);
-	_scope.add(*param_iter++, arg_iter++);
+    auto param = node.payload().params.begin();
+    for(llvm::Argument& arg: func->args()) {
+	arg.setName(*param++);
     }
+
+    _functions.add(node.payload().name, func);
+    scope_pusher pusher{&_scope, func};
 
     llvm::BasicBlock* block = llvm::BasicBlock::Create(*_context, "entry", func);
     _builder.SetInsertPoint(block);
 
-    node.for_each_child([&visitor] (const std::any& node) { return any_tree::visit_node(visitor, node); });
+    for(auto& arg: func->args()) {
+	llvm::AllocaInst* inst = _builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+
+	_builder.CreateStore(&arg, inst);
+
+	_scope.add(std::string{arg.getName()}, inst);
+    }
+    std::cout << "allocated args" << std::endl;
+
+    node.for_each_child([&visitor] (const std::any& node) { any_tree::visit_node(visitor, node); });
 
     if(llvm::verifyFunction(*func)) {
 	func->eraseFromParent();
@@ -70,40 +82,83 @@ auto code_generator::function(const visitor& visitor, const function_node& node)
     return func;
 }
 
-auto code_generator::statement(const visitor& visitor, const statement_node& node) -> llvm::Value* {
-    std::cerr << "statement" << std::endl;
-    llvm::Value* inner = any_tree::visit_node(visitor, node.child_at(0));
+auto code_generator::return_statement(const visitor& visitor, const return_statement_node& node) -> llvm::Value* {
+    std::cout << "return statement" << std::endl;
+    return _builder.CreateRet(any_tree::visit_node(visitor, node.child_at(0)));
+}
 
-    if(node.payload().is_return) {
-	return _builder.CreateRet(inner);
-    } 
+auto code_generator::let_statement(const visitor& visitor, const let_statement_node& node) -> llvm::Value* {
+    std::cout << "let statement" << std::endl;
 
-    return inner;
+    std::vector<llvm::Value*> definitions{};
+    definitions.reserve(node.children_size());
+
+    std::ranges::transform(
+	    node.children(), 
+	    std::back_inserter(definitions),
+	    [&visitor] (const std::any& node) { return any_tree::visit_node(visitor, node); }
+    );
+
+    bool invalid_definitions = std::ranges::any_of(
+	    definitions, 
+	    [] (llvm::Value* value) { return value == nullptr; }
+    );
+    if(invalid_definitions) {
+	return nullptr;
+    }
+
+    return definitions.back();
+}
+
+auto code_generator::var_def(const visitor& visitor, const var_def_node& node) -> llvm::Value* {
+    std::cout << "variable definition" << std::endl;
+
+    llvm::IRBuilder<> alloca_builder = entry_builder(_scope.function());
+
+    llvm::Type* type = *_types->get(node.payload().type).value_or(type::type{});
+
+    llvm::AllocaInst* inst = alloca_builder.CreateAlloca(type, nullptr, node.payload().name);
+
+    if(node.children().empty()) {
+	_scope.add(node.payload().name, inst);
+	return inst;
+    }
+
+    llvm::Value* value = any_tree::visit_node(visitor, node.child_at(0));
+
+    if(value == nullptr) {
+	return nullptr;
+    }
+
+    _builder.CreateStore(value, inst);
+
+    _scope.add(node.payload().name, inst);
+    return inst;
 }
 
 auto code_generator::binary_expr(const visitor& visitor, const binary_expr_node& node) -> llvm::Value* {
-    std::cerr << "binary" << std::endl;
+    std::cout << "binary" << std::endl;
     llvm::Value* lhs = any_tree::visit_node(visitor, node.child_at(0));
     if(lhs == nullptr) {
-	std::cerr << "invalid lhs expression" << std::endl;
+	std::cout << "invalid lhs expression" << std::endl;
 	return nullptr;
     }
 
     llvm::Value* rhs = any_tree::visit_node(visitor, node.child_at(1));
     if(rhs == nullptr) {
-	std::cerr << "invalid rhs expression" << std::endl;
+	std::cout << "invalid rhs expression" << std::endl;
 	return nullptr;
     }
 
     auto bin_operator = _special->binary(node.payload().oper).get(node.payload().lhs, node.payload().rhs);
     if(!type::valid(bin_operator.return_type)) {
-	std::cerr << "invalid operator return type" << std::endl;
+	std::cout << "invalid operator return type" << std::endl;
 	return nullptr;
     }
 
     // pointer to function is invalid
     if(!bin_operator.inserter) {
-	std::cerr << "invalid operator inserter function" << std::endl;
+	std::cout << "invalid operator inserter function" << std::endl;
 	return nullptr;
     }
 
@@ -111,7 +166,7 @@ auto code_generator::binary_expr(const visitor& visitor, const binary_expr_node&
 }
 
 auto code_generator::call(const visitor& visitor, const call_node& node) -> llvm::Value* {
-    std::cerr << "call" << std::endl;
+    std::cout << "call" << std::endl;
     llvm::Function* callee = _module.getFunction(node.payload().callee);
     if(callee == nullptr) {
 	return nullptr;
@@ -131,7 +186,7 @@ auto code_generator::call(const visitor& visitor, const call_node& node) -> llvm
 	    [] (llvm::Value* value) { return value == nullptr; }
     );
     if(invalid_params) {
-	std::cerr << "invalid function argument" << std::endl;
+	std::cout << "invalid function argument" << std::endl;
 	return nullptr;
     }
 
@@ -139,7 +194,7 @@ auto code_generator::call(const visitor& visitor, const call_node& node) -> llvm
 }
 
 auto code_generator::implicit_cast(const visitor& visitor, const implicit_cast_node& node) -> llvm::Value* {
-    std::cerr << "cast" << std::endl;
+    std::cout << "cast" << std::endl;
     auto cast = _special->cast(node.payload().from_type).get(node.payload().to_type);
     if(!cast.has_value()) {
 	return nullptr;
@@ -154,22 +209,29 @@ auto code_generator::implicit_cast(const visitor& visitor, const implicit_cast_n
 }
 
 auto code_generator::identifier(const identifier_node& node) -> llvm::Value* {
-    std::cerr << "identifier" << std::endl;
-    return _scope.get(node.payload()).value_or(nullptr);
+    std::cout << "identifier" << std::endl;
+
+    const auto& alloca = _scope.get(node.payload()).value_or(nullptr);
+
+    if(alloca == nullptr) {
+	return nullptr;
+    }
+
+    return _builder.CreateLoad(alloca->getAllocatedType(), alloca, node.payload());
 }
 
 auto code_generator::integer_literal(const integer_literal_node& node) -> llvm::Value* {
-    std::cerr << "integer_literal" << std::endl;
+    std::cout << "integer_literal" << std::endl;
     return llvm::ConstantInt::get(*_types->get(node.payload().type).value_or(type::type{}), node.payload().value);
 }
 
 auto code_generator::floating_literal(const floating_literal_node& node) -> llvm::Value* {
-    std::cerr << "floating_literal" << std::endl;
+    std::cout << "floating_literal" << std::endl;
     return llvm::ConstantFP::get(*_types->get(node.payload().type).value_or(type::type{}), node.payload().value);
 }
 
 auto code_generator::char_literal(const char_literal_node& node) -> llvm::Value* {
-    std::cerr << "char_literal" << std::endl;
+    std::cout << "char_literal" << std::endl;
     return llvm::ConstantInt::get(*_types->get(node.payload().type).value_or(type::type{}), node.payload().value);
 }
 
@@ -177,7 +239,7 @@ auto code_generator::string_literal(const string_literal_node& node) -> llvm::Va
 }
 
 auto code_generator::bool_literal(const bool_literal_node& node) -> llvm::Value* {
-    std::cerr << "bool_literal" << std::endl;
+    std::cout << "bool_literal" << std::endl;
     return llvm::ConstantInt::get(*_types->get(node.payload().type).value_or(type::type{}), static_cast<uint64_t>(node.payload().value));
 }
 
@@ -191,7 +253,9 @@ code_generator::code_generator(const std::string& module_name, llvm::LLVMContext
     _visitor = {
 	any_tree::make_const_child_visitor<file_node>            ([this] (const file_node& node)              { return file(_visitor, node); }),
 	any_tree::make_const_child_visitor<function_node>        ([this] (const function_node& node)          { return function(_visitor, node); }),
-	any_tree::make_const_child_visitor<statement_node>       ([this] (const statement_node& node)         { return statement(_visitor, node); }),
+	any_tree::make_const_child_visitor<return_statement_node>([this] (const return_statement_node& node)  { return return_statement(_visitor, node); }),
+	any_tree::make_const_child_visitor<let_statement_node>   ([this] (const let_statement_node& node)     { return let_statement(_visitor, node); }),
+	any_tree::make_const_child_visitor<var_def_node>         ([this] (const var_def_node& node)           { return var_def(_visitor, node); }),
 	any_tree::make_const_child_visitor<binary_expr_node>     ([this] (const binary_expr_node& node)       { return binary_expr(_visitor, node); }),
 	any_tree::make_const_child_visitor<call_node>            ([this] (const call_node& node)              { return call(_visitor, node); }),
 	any_tree::make_const_child_visitor<implicit_cast_node>   ([this] (const implicit_cast_node& node)     { return implicit_cast(_visitor, node); }),
