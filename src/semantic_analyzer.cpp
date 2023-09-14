@@ -1,5 +1,4 @@
 #include <iostream>
-#include <math.h>
 #include <ranges>
 #include <algorithm>
 #include <tuple>
@@ -107,7 +106,6 @@ auto var_def_without_expr(var_def_node& node) -> type::type_id {
     return node.payload().type;
 }
 
-
 auto semantic_analyzer::var_def(const visitor& visitor, var_def_node& node) -> type::type_id {
     type::type_id type{};
 
@@ -161,18 +159,20 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 	// cast is from one type to another, not from literal to specific type
 	bool type_cast_lhs = should_cast_lhs && !type::is_literal(lhs_type);
 	bool type_cast_rhs = should_cast_rhs && !type::is_literal(rhs_type);
+	bool must_cast_both = type_cast_lhs && type_cast_rhs;
 
 	// allow only lhs cast or rhs cast not both
-	if(type_cast_lhs && type_cast_rhs) {
+	if(must_cast_both) {
 	    continue;
 	}
 
 	bool can_cast_lhs = _special->cast(lhs_type).get(operands.first).has_value();
 	bool can_cast_rhs = _special->cast(rhs_type).get(operands.second).has_value();
 
+	bool impossible_cast = (should_cast_lhs && !can_cast_lhs) || (should_cast_rhs && !can_cast_rhs);
+
 	// check if operand should be casted but unable to
-	if((should_cast_lhs && !can_cast_lhs) ||
-	   (should_cast_rhs && !can_cast_rhs)) {
+	if(impossible_cast) {
 	    continue;
 	}
 
