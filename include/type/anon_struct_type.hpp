@@ -33,6 +33,8 @@ public:
     constexpr inline auto get()        const noexcept -> llvm::StructType* { return _type; }
     constexpr inline auto operator*()  const noexcept -> llvm::StructType* { return _type; }
     constexpr inline auto operator->() const noexcept -> llvm::StructType* { return _type; }
+
+    inline auto get_ptr() const noexcept -> llvm::Type* { return _type->getPointerTo(); }
 };
 
 } // namespace type
