@@ -2,6 +2,9 @@
 #include <fstream>
 
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
+
 #include <nlohmann/json.hpp>
 #include <any_tree.hpp>
 
@@ -167,7 +170,34 @@ auto main(int argc, char** argv) -> int {
 	return 1;
     }
 
-    generator.get_module().print(llvm::errs(), nullptr);
+    llvm::Module& module = generator.get_module();
+    
+    std::cerr << "before optimization" << std::endl;
+    module.print(llvm::errs(), nullptr);
+
+    // Create the analysis managers.
+    llvm::LoopAnalysisManager lam;
+    llvm::FunctionAnalysisManager fam;
+    llvm::CGSCCAnalysisManager cgam;
+    llvm::ModuleAnalysisManager mam;
+
+    // Create the new pass manager builder.
+    llvm::PassBuilder pass_builder;
+
+    // Register all the basic analyses with the managers.
+    pass_builder.registerModuleAnalyses(mam);
+    pass_builder.registerCGSCCAnalyses(cgam);
+    pass_builder.registerFunctionAnalyses(fam);
+    pass_builder.registerLoopAnalyses(lam);
+    pass_builder.crossRegisterProxies(lam, fam, cgam, mam);
+
+    // Create the pass manager.
+    llvm::ModulePassManager mpm = pass_builder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O1);
+
+    mpm.run(module, mam);
+
+    std::cerr << "after optimization" << std::endl;
+    module.print(llvm::errs(), nullptr);
 
     return 0;
 }
