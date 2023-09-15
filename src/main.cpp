@@ -60,7 +60,7 @@ auto main(int argc, char** argv) -> int {
     std::size_t tab{};
     any_tree::const_children_visitor<void> visitor {
 	any_tree::make_const_child_visitor<file_node>([&visitor, &tab] (const file_node& n) { 
-		std::cout << "file1" << std::endl;
+		std::cout << "file" << std::endl;
 		++tab;
 		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 	}),
@@ -119,6 +119,79 @@ auto main(int argc, char** argv) -> int {
 		--tab;
 
 	}),
+	any_tree::make_const_child_visitor<if_node>([&visitor, &tab] (const if_node& n) {
+		tabs(tab);
+		std::cout << "if stmt" << std::endl; 
+		++tab;
+		tabs(tab);
+		std::cout << "let" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(0));
+		--tab;
+		tabs(tab);
+		std::cout << "cond" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(1));
+		--tab;
+		tabs(tab);
+		std::cout << "then" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(2));
+		tab -= 2;
+	}),
+	any_tree::make_const_child_visitor<if_else_node>([&visitor, &tab] (const if_else_node& n) {
+		tabs(tab);
+		std::cout << "if stmt" << std::endl; 
+		++tab;
+		tabs(tab);
+		std::cout << "let" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(0));
+		--tab;
+		tabs(tab);
+		std::cout << "cond" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(1));
+		--tab;
+		tabs(tab);
+		std::cout << "then" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(2));
+		--tab;
+		tabs(tab);
+		std::cout << "else" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(3));
+		tab -= 2;
+	}),
+	any_tree::make_const_child_visitor<if_else_expr_node>([&visitor, &tab] (const if_else_expr_node& n) {
+		tabs(tab);
+		std::cout << "if" << std::endl; 
+		++tab;
+		tabs(tab);
+		std::cout << "let" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(0));
+		--tab;
+		tabs(tab);
+		std::cout << "cond" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(1));
+		--tab;
+		tabs(tab);
+		std::cout << "then" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(2));
+		--tab;
+		tabs(tab);
+		std::cout << "else" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(3));
+		tab -= 2;
+	}),
+	any_tree::make_const_child_visitor<if_block_node>([&visitor] (const if_block_node& n) {
+		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
+	}),
 	any_tree::make_const_child_visitor<implicit_cast_node>([&visitor, &tab] (const implicit_cast_node& n) {
 		tabs(tab);
 		std::cout << "cast from " << n.payload().from_type << " to " << n.payload().to_type << std::endl;
@@ -158,12 +231,22 @@ auto main(int argc, char** argv) -> int {
 		tabs(tab);
 		std::cout << "literal " << n.payload().value << ' ' << n.payload().type << std::endl;
 	}),
+	any_tree::make_const_child_visitor<void>([] () {
+		std::cout << "nothing to see here" << std::endl;
+	}),
     };
 
+    std::cout << "building finished" << std::endl;
+
     semantic_analyzer analyzer{&functions, &types};
-    std::cout << any_tree::visit_node(analyzer.get_visitor(), tree) << std::endl;
+    auto analyzer_result = any_tree::visit_node(analyzer.get_visitor(), tree);
+    std::cout << analyzer_result << std::endl;
 
     any_tree::visit_node(visitor, tree);
+
+    if(!type::valid(analyzer_result)) {
+	return -1;
+    }
 
     code_generator generator{argv[1], &context, &functions, &types};
     if(llvm::Value* func = any_tree::visit_node(generator.get_visitor(), tree); func == nullptr) {

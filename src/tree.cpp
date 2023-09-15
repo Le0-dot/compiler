@@ -1,5 +1,8 @@
 #include <algorithm>
+#include <bits/ranges_algo.h>
+#include <iostream>
 #include <iterator>
+#include <typeindex>
 #include <unordered_map>
 #include <functional>
 #include <vector>
@@ -51,6 +54,7 @@ auto tree_builder::stmt(const json& object) -> std::any {
 	{"IgnoreResultStmt",       expr_hander()},
 	{"ReturnStmt",             return_stmt_hander()},
 	{"VariableDefinitionStmt", let_stmt_hander()},
+	{"IfStmt",                 if_handler()},
     };
 
     return handlers[object["tag"]](object["contents"]);
@@ -122,9 +126,6 @@ auto tree_builder::expr(const json& object) -> std::any {
 	ops.emplace_back(rhs["op"].template get<std::string>());
 	primaries.emplace_back(primary(rhs["rhsOperand"]));
     });
-    // or
-    //std::ranges::transform(object["rhs"] | std::ranges::views::transform([] (auto& object) { return object["op"]; }), std::back_inserter(ops), &json::template get<std::string>);
-    //std::ranges::transform(object["rhs"] | std::ranges::views::transform([] (auto& object) { return object["rhsOperand"]; }), std::back_inserter(primaries), primary);
 
     return operator_resolution(std::span{primaries}, std::span{ops});
 }
@@ -132,14 +133,68 @@ auto tree_builder::expr(const json& object) -> std::any {
 auto tree_builder::primary(const json& object) -> std::any {
     // should replace with constexpr std::flat_map once c++23 is out
     static std::unordered_map<std::string, std::function<std::any(const json&)>> handlers{
-	{"id",      [] (const json& object) { return identifier_node{object.template get<std::string>()}; }},
-	{"parens",  expr_hander()},
-	{"call",    call_hander()},
-	{"literal", literal},
+	{"PrimaryId",      [] (const json& object) { return identifier_node{object.template get<std::string>()}; }},
+	{"PrimaryParens",  expr_hander()},
+	{"PrimaryCall",    call_hander()},
+	{"PrimaryLiteral", literal},
+	{"PrimaryIf",      if_expr_handler()},
     };
 
-    const std::string& type = object["type"].template get<std::string>();
-    return handlers[type](object["val"]);
+    const std::string& type = object["tag"].template get<std::string>();
+    return handlers[type](object["contents"]);
+}
+
+auto tree_builder::if_stmt(const json& object) -> std::any {
+    if_info info{!object["ifScopeVar"].is_null()};
+
+    std::any let{};
+    if(info.has_let) {
+	let = let_stmt(object["ifScopeVar"]);
+    }
+
+    std::any cond = expr(object["cond"]);
+    std::any then = if_block(object["thenBlock"]);
+
+    if(const json& else_blk = object["elseBlock"]; !else_blk.is_null()) {
+	if_else_node node{info};
+	node.child_at(0) = let;
+	node.child_at(1) = cond;
+	node.child_at(2) = then;
+	node.child_at(3) = if_block(else_blk);
+	return node;
+    } 
+
+    if_node node{info};
+    node.child_at(0) = let;
+    node.child_at(1) = cond;
+    node.child_at(2) = then;
+    return node;
+}
+
+auto tree_builder::if_expr(const json& object) -> if_else_expr_node {
+    if(object["elseBlock"].is_null()) {
+	// temporary
+	throw int{};
+    }
+
+    if_else_expr_node node{!object["ifScopeVar"].is_null()};
+
+    if(node.payload().has_let) {
+	node.child_at(0) = let_stmt(object["ifScopeVar"]);
+    }
+
+    node.child_at(1) = expr(object["cond"]);
+    node.child_at(2) = if_block(object["thenBlock"]);
+    node.child_at(3) = if_block(object["elseBlock"]);
+    return node;
+}
+
+auto tree_builder::if_block(const json& object) -> if_block_node {
+    if_block_node node{};
+
+    std::ranges::transform(object, std::back_inserter(node.children()), stmt_hander());
+
+    return node;
 }
 
 auto tree_builder::call(const json& object) -> call_node {
@@ -167,7 +222,6 @@ auto insert_implicit_cast(std::any &&node, type::type_id from_type, type::type_i
     if(from_type == to_type) { 
 	return node;
     }
-
     if(type::is_literal(from_type)) {
 	any_tree::children_visitor<void> visitor{
 	    any_tree::make_child_visitor<integer_literal_node>([to_type] (integer_literal_node& node) { node.payload().type = to_type; }),
