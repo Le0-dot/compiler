@@ -27,6 +27,10 @@ private:
     auto let_statement   (const visitor& visitor, let_statement_node& node)    -> type::type_id;
     auto var_def         (const visitor& visitor, var_def_node& node)          -> type::type_id;
     auto binary_expr     (const visitor& visitor, binary_expr_node& node)      -> type::type_id;
+    auto if_stmt         (const visitor& visitor, if_node& node)               -> type::type_id;
+    auto if_else_stmt    (const visitor& visitor, if_else_node& node)          -> type::type_id;
+    auto if_else_expr    (const visitor& visitor, if_else_expr_node& node)     -> type::type_id;
+    auto if_block        (const visitor& visitor, if_block_node& node)         -> type::type_id;
     auto call            (const visitor& visitor, call_node& node)             -> type::type_id;
 
     auto identifier (identifier_node& node) -> type::type_id;

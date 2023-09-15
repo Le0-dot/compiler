@@ -11,7 +11,7 @@ enum class type_id : std::uint64_t {
     undetermined,
     unset,
     good_file, 
-    good_var_def,
+    good_stmt,
 
     u_literal,
     i_literal,

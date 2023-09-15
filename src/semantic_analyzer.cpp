@@ -63,7 +63,7 @@ auto semantic_analyzer::return_statement(const visitor& visitor, return_statemen
     }
 
     node.child_at(0) = insert_implicit_cast(std::move(node.child_at(0)), stmt_type, func_return);
-    return func_return;
+    return type::type_id::good_stmt;
 }
 
 auto semantic_analyzer::let_statement(const visitor& visitor, let_statement_node& node) -> type::type_id {
@@ -72,7 +72,7 @@ auto semantic_analyzer::let_statement(const visitor& visitor, let_statement_node
 	    type::valid,
 	    [&visitor] (std::any& child) { return any_tree::visit_node(visitor, child); }
     );
-    return result ? type::type_id::good_var_def : type::type_id::undetermined;
+    return result ? type::type_id::good_stmt : type::type_id::undetermined;
 }
 
 auto var_def_with_expr(const semantic_analyzer::visitor& visitor, var_def_node& node, special_functions* special) -> type::type_id {
@@ -120,7 +120,7 @@ auto semantic_analyzer::var_def(const visitor& visitor, var_def_node& node) -> t
     }
 
     _scope.add(node.payload().name, node.payload().type);
-    return type::type_id::good_var_def;
+    return type::type_id::good_stmt;
 }
 
 auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& node) -> type::type_id {
@@ -202,6 +202,135 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
     return expr;
 }
 
+auto semantic_analyzer::if_stmt(const visitor& visitor, if_node& node) -> type::type_id {
+    scope_pusher pusher{&_scope, _scope.function()};
+
+    auto let_t = type::type_id::unset;
+    if(node.payload().has_let) {
+	let_t = any_tree::visit_node(visitor, node.child_at(0));
+    }
+
+    auto cond_t = any_tree::visit_node(visitor, node.child_at(1));
+    auto then_t = any_tree::visit_node(visitor, node.child_at(2));
+
+    bool valid = type::valid(let_t) && type::valid(cond_t) && type::valid(then_t);
+    if(!valid) {
+	return type::type_id::undetermined;
+    }
+
+    if(cond_t != type::type_id::bool_) {
+	auto cast = _special->cast(cond_t).get(type::type_id::bool_);
+	if(!cast.has_value()) {
+	    return type::type_id::undetermined;
+	}
+
+	node.child_at(1) = insert_implicit_cast(std::move(node.child_at(1)), cond_t, type::type_id::bool_);
+    }
+
+    return type::type_id::good_stmt;
+}
+
+auto semantic_analyzer::if_else_stmt(const visitor& visitor, if_else_node& node) -> type::type_id {
+    scope_pusher pusher{&_scope, _scope.function()};
+
+    auto let_t = type::type_id::unset;
+    if(node.payload().has_let) {
+	let_t = any_tree::visit_node(visitor, node.child_at(0));
+    }
+
+    auto cond_t = any_tree::visit_node(visitor, node.child_at(1));
+    auto then_t = any_tree::visit_node(visitor, node.child_at(2));
+    auto else_t = any_tree::visit_node(visitor, node.child_at(3));
+
+    bool valid = type::valid(let_t) && type::valid(cond_t) && type::valid(then_t) && type::valid(else_t);
+    if(!valid) {
+	return type::type_id::undetermined;
+    }
+
+    if(cond_t != type::type_id::bool_) {
+	auto cast = _special->cast(cond_t).get(type::type_id::bool_);
+	if(!cast.has_value()) {
+	    return type::type_id::undetermined;
+	}
+
+	node.child_at(1) = insert_implicit_cast(std::move(node.child_at(1)), cond_t, type::type_id::bool_);
+    }
+
+    return type::type_id::good_stmt;
+}
+
+auto semantic_analyzer::if_else_expr(const visitor& visitor, if_else_expr_node& node) -> type::type_id {
+    scope_pusher pusher{&_scope, _scope.function()};
+
+    auto let_t = type::type_id::unset;
+    if(node.payload().has_let) {
+	let_t = any_tree::visit_node(visitor, node.child_at(0));
+    }
+
+    auto cond_t = any_tree::visit_node(visitor, node.child_at(1));
+    auto then_t = any_tree::visit_node(visitor, node.child_at(2));
+    auto else_t = any_tree::visit_node(visitor, node.child_at(3));
+
+    bool valid = type::valid(let_t) && type::valid(cond_t) && type::valid(then_t) && type::valid(else_t);
+    if(!valid) {
+	return type::type_id::undetermined;
+    }
+
+    if(cond_t != type::type_id::bool_) {
+	auto cast = _special->cast(cond_t).get(type::type_id::bool_);
+	if(!cast.has_value()) {
+	    return type::type_id::undetermined;
+	}
+
+	node.child_at(1) = insert_implicit_cast(std::move(node.child_at(1)), cond_t, type::type_id::bool_);
+    }
+
+    if(then_t == else_t) {
+	return then_t;
+    }
+
+    type::type_id common;
+    auto& then_blk = std::any_cast<if_block_node&>(node.child_at(2));
+    auto& else_blk = std::any_cast<if_block_node&>(node.child_at(3));
+
+    if(type::is_literal(then_t) && !type::is_literal(else_t)) {
+	then_blk.children().back() = insert_implicit_cast(std::move(then_blk.children().back()), then_t, else_t);
+	common = else_t;
+    }
+
+    if(!type::is_literal(then_t) && type::is_literal(else_t)) {
+	else_blk.children().back() = insert_implicit_cast(std::move(else_blk.children().back()), else_t, then_t);
+	common = then_t;
+    }
+
+    if(type::is_literal(then_t) && type::is_literal(else_t)) {
+	// TODO: find common type of 2 literals
+	return type::type_id::undetermined;
+    }
+
+    if(!type::valid(common)) {
+	return type::type_id::undetermined;
+    }
+
+    return common;
+}
+
+auto semantic_analyzer::if_block(const visitor& visitor, if_block_node& node) -> type::type_id {
+    auto children = node.children() | std::ranges::views::transform(
+	    [&visitor] (std::any& child) { return any_tree::visit_node(visitor, child); }
+    );
+
+    return std::accumulate(children.begin(), children.end(), type::type_id::unset,
+	    [] (type::type_id left, type::type_id right) {
+		if(!type::valid(left) || !type::valid(right)) {
+		    return type::type_id::undetermined;
+		}
+
+		return right;
+	    }
+    );
+}
+
 auto semantic_analyzer::call(const visitor& visitor, call_node& node) -> type::type_id {
     type::type_id func_type_id = _scope.get(node.payload().callee).value_or(type::type_id::undetermined);
     const type::function_type* func_type = _types->get_function(func_type_id);
@@ -272,6 +401,10 @@ semantic_analyzer::semantic_analyzer(special_functions* special, type::registry*
 	any_tree::make_child_visitor<let_statement_node>   ([this] (let_statement_node& node)    { return let_statement(_visitor, node); }),
 	any_tree::make_child_visitor<var_def_node>         ([this] (var_def_node& node)          { return var_def(_visitor, node); }),
 	any_tree::make_child_visitor<binary_expr_node>     ([this] (binary_expr_node& node)      { return binary_expr(_visitor, node); }),
+	any_tree::make_child_visitor<if_node>              ([this] (if_node& node)               { return if_stmt(_visitor, node); }),
+	any_tree::make_child_visitor<if_else_node>         ([this] (if_else_node& node)          { return if_else_stmt(_visitor, node); }),
+	any_tree::make_child_visitor<if_else_expr_node>    ([this] (if_else_expr_node& node)     { return if_else_expr(_visitor, node); }),
+	any_tree::make_child_visitor<if_block_node>        ([this] (if_block_node& node)         { return if_block(_visitor, node); }),
 	any_tree::make_child_visitor<call_node>            ([this] (call_node& node)             { return call(_visitor, node); }),
 	any_tree::make_child_visitor<identifier_node>      ([this] (identifier_node& node)       { return identifier(node); }),
 	any_tree::make_child_visitor<integer_literal_node> (integer_literal ),
@@ -279,5 +412,6 @@ semantic_analyzer::semantic_analyzer(special_functions* special, type::registry*
 	any_tree::make_child_visitor<char_literal_node>    (char_literal    ),
 	any_tree::make_child_visitor<string_literal_node>  (string_literal  ),
 	any_tree::make_child_visitor<bool_literal_node>    (bool_literal    ),
+	any_tree::make_child_visitor<void>                 ([] () { return type::type_id::undetermined; }),
     };
 }
