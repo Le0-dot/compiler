@@ -1,6 +1,6 @@
 #include <algorithm>
-
 #include <iostream>
+
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -10,6 +10,7 @@
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
 
+#include "any_tree/visitor.hpp"
 #include "code_generator.hpp"
 #include "tree.hpp"
 #include "type/type.hpp"
@@ -114,11 +115,9 @@ auto code_generator::let_statement(const visitor& visitor, const let_statement_n
 auto code_generator::var_def(const visitor& visitor, const var_def_node& node) -> llvm::Value* {
     std::cout << "variable definition" << std::endl;
 
-    llvm::IRBuilder<> alloca_builder = entry_builder(_scope.function());
-
     llvm::Type* type = *_types->get(node.payload().type).value_or(type::type{});
 
-    llvm::AllocaInst* inst = alloca_builder.CreateAlloca(type, nullptr, node.payload().name);
+    llvm::AllocaInst* inst = entry_builder(_scope.function()).CreateAlloca(type, nullptr, node.payload().name);
 
     if(node.children().empty()) {
 	_scope.add(node.payload().name, inst);
@@ -172,6 +171,158 @@ auto code_generator::binary_expr(const visitor& visitor, const binary_expr_node&
     }
 
     return bin_operator.inserter(&_builder, lhs, rhs);
+}
+
+auto code_generator::if_stmt(const visitor& visitor, const if_node& node) -> llvm::Value* {
+    std::cout << "if_stmt" << std::endl;
+    if(node.payload().has_let && any_tree::visit_node(visitor, node.child_at(0)) == nullptr) {
+	return nullptr;
+    }
+
+    llvm::Value* cond = any_tree::visit_node(visitor, node.child_at(1));
+    if(cond == nullptr) {
+	return nullptr;
+    }
+
+    llvm::BasicBlock* then_block = llvm::BasicBlock::Create(*_context, "then", _scope.function());
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge");
+
+    _builder.CreateCondBr(cond, then_block, merge_block);
+
+    // then
+    _builder.SetInsertPoint(then_block);
+
+    llvm::Value* then_value = any_tree::visit_node(visitor, node.child_at(2));
+    if(then_value == nullptr) {
+	return nullptr;
+    }
+
+    _builder.CreateBr(merge_block);
+
+    // merge
+    _scope.function()->getBasicBlockList().push_back(merge_block);
+    _builder.SetInsertPoint(merge_block);
+
+    return then_value;
+}
+
+auto code_generator::if_else_stmt(const visitor& visitor, const if_else_node& node) -> llvm::Value* {
+    std::cout << "if_else_stmt" << std::endl;
+    if(node.payload().has_let && any_tree::visit_node(visitor, node.child_at(0)) == nullptr) {
+	return nullptr;
+    }
+
+    llvm::Value* cond = any_tree::visit_node(visitor, node.child_at(1));
+    if(cond == nullptr) {
+	return nullptr;
+    }
+
+    llvm::BasicBlock* then_block = llvm::BasicBlock::Create(*_context, "then", _scope.function());
+    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(*_context, "else");
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge");
+
+    _builder.CreateCondBr(cond, then_block, else_block);
+
+    // then
+    _builder.SetInsertPoint(then_block);
+
+    llvm::Value* then_value = any_tree::visit_node(visitor, node.child_at(2));
+    if(then_value == nullptr) {
+	return nullptr;
+    }
+
+    _builder.CreateBr(merge_block);
+    then_block = _builder.GetInsertBlock();
+
+    // else
+    _scope.function()->getBasicBlockList().push_back(else_block);
+    _builder.SetInsertPoint(else_block);
+
+    llvm::Value* else_value = any_tree::visit_node(visitor, node.child_at(3));
+    if(else_value == nullptr) {
+	return nullptr;
+    }
+
+    _builder.CreateBr(merge_block);
+
+    // merge
+    _scope.function()->getBasicBlockList().push_back(merge_block);
+    _builder.SetInsertPoint(merge_block);
+
+    return else_value;
+}
+
+auto code_generator::if_else_expr(const visitor& visitor, const if_else_expr_node& node) -> llvm::Value* {
+    std::cout << "if_else_expr" << std::endl;
+    if(node.payload().has_let && any_tree::visit_node(visitor, node.child_at(0)) == nullptr) {
+	return nullptr;
+    }
+
+    llvm::Value* cond = any_tree::visit_node(visitor, node.child_at(1));
+    if(cond == nullptr) {
+	return nullptr;
+    }
+
+    llvm::BasicBlock* then_block = llvm::BasicBlock::Create(*_context, "then", _scope.function());
+    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(*_context, "else");
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge");
+
+    _builder.CreateCondBr(cond, then_block, else_block);
+
+    // then
+    _builder.SetInsertPoint(then_block);
+
+    llvm::Value* then_value = any_tree::visit_node(visitor, node.child_at(2));
+    if(then_value == nullptr) {
+	return nullptr;
+    }
+
+    _builder.CreateBr(merge_block);
+    then_block = _builder.GetInsertBlock();
+
+    // else
+    _scope.function()->getBasicBlockList().push_back(else_block);
+    _builder.SetInsertPoint(else_block);
+
+    llvm::Value* else_value = any_tree::visit_node(visitor, node.child_at(3));
+    if(else_value == nullptr) {
+	return nullptr;
+    }
+
+    _builder.CreateBr(merge_block);
+    else_block = _builder.GetInsertBlock();
+
+    // merge
+    _scope.function()->getBasicBlockList().push_back(merge_block);
+    _builder.SetInsertPoint(merge_block);
+
+    llvm::PHINode* phi = _builder.CreatePHI(then_value->getType(), 2, "tmpif");
+    phi->addIncoming(then_value, then_block);
+    phi->addIncoming(else_value, else_block);
+
+    return phi;
+}
+
+auto code_generator::if_block(const visitor& visitor, const if_block_node& node) -> llvm::Value* {
+    std::vector<llvm::Value*> statements{};
+    statements.reserve(node.children_size());
+
+    std::ranges::transform(
+	    node.children(), 
+	    std::back_inserter(statements),
+	    [&visitor] (const std::any& node) { return any_tree::visit_node(visitor, node); }
+    );
+
+    bool invalid_statements = std::ranges::any_of(
+	    statements, 
+	    [] (llvm::Value* value) { return value == nullptr; }
+    );
+    if(invalid_statements) {
+	std::cout << "invalid function argument" << std::endl;
+	return nullptr;
+    }
+
+    return statements.back();
 }
 
 auto code_generator::call(const visitor& visitor, const call_node& node) -> llvm::Value* {
@@ -266,6 +417,10 @@ code_generator::code_generator(const std::string& module_name, llvm::LLVMContext
 	any_tree::make_const_child_visitor<let_statement_node>   ([this] (const let_statement_node& node)     { return let_statement(_visitor, node); }),
 	any_tree::make_const_child_visitor<var_def_node>         ([this] (const var_def_node& node)           { return var_def(_visitor, node); }),
 	any_tree::make_const_child_visitor<binary_expr_node>     ([this] (const binary_expr_node& node)       { return binary_expr(_visitor, node); }),
+	any_tree::make_const_child_visitor<if_node>              ([this] (const if_node& node)                { return if_stmt(_visitor, node); }),
+	any_tree::make_const_child_visitor<if_else_node>         ([this] (const if_else_node& node)           { return if_else_stmt(_visitor, node); }),
+	any_tree::make_const_child_visitor<if_else_expr_node>    ([this] (const if_else_expr_node& node)      { return if_else_expr(_visitor, node); }),
+	any_tree::make_const_child_visitor<if_block_node>        ([this] (const if_block_node& node)          { return if_block(_visitor, node); }),
 	any_tree::make_const_child_visitor<call_node>            ([this] (const call_node& node)              { return call(_visitor, node); }),
 	any_tree::make_const_child_visitor<implicit_cast_node>   ([this] (const implicit_cast_node& node)     { return implicit_cast(_visitor, node); }),
 	any_tree::make_const_child_visitor<identifier_node>      ([this] (const identifier_node& node)        { return identifier(node); }),
@@ -274,5 +429,6 @@ code_generator::code_generator(const std::string& module_name, llvm::LLVMContext
 	any_tree::make_const_child_visitor<char_literal_node>    ([this] (const char_literal_node& node)      { return char_literal(node); }),
 	any_tree::make_const_child_visitor<string_literal_node>  ([this] (const string_literal_node& node)    { return string_literal(node); }),
 	any_tree::make_const_child_visitor<bool_literal_node>    ([this] (const bool_literal_node& node)      { return bool_literal(node); }),
+	any_tree::make_const_child_visitor<void>                 ([] () { return nullptr; }),
     };
 }
