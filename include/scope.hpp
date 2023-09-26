@@ -78,8 +78,12 @@ class scope_pusher {
     scope_manager<T, F>* _scope;
 
 public:
-    explicit scope_pusher(scope_manager<T, F>* scope, F function) : _scope{scope} {
+    scope_pusher(scope_manager<T, F>* scope, F function) : _scope{scope} {
 	_scope->push(function);
+    }
+
+    explicit scope_pusher(scope_manager<T, F>* scope) : _scope{scope} {
+	_scope->push(_scope->function());
     }
 
     ~scope_pusher() { _scope->pop(); }
