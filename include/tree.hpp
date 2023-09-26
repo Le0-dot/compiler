@@ -51,16 +51,18 @@ struct cast_info {
 
 using file_node             = any_tree::dynamic_node<void>;
 using let_statement_node    = any_tree::dynamic_node<void, 1>;
-using if_block_node	    = any_tree::dynamic_node<void, 2>;
-using function_node         = any_tree::dynamic_node<function_info>;
+using block_node	    = any_tree::dynamic_node<void, 2>;
 using var_def_node          = any_tree::dynamic_node<var_def_info>;
 using call_node             = any_tree::dynamic_node<call_info>;
+using function_node         = any_tree::static_node<function_info, 1>;
 using return_statement_node = any_tree::static_node<void, 1>;
 using binary_expr_node      = any_tree::static_node<binary_expr_info, 2>;
-// if's
-using if_node               = any_tree::static_node<if_info, 3, 0>;
-using if_else_node          = any_tree::static_node<if_info, 4, 1>;
-using if_else_expr_node     = any_tree::static_node<if_info, 4, 2>;
+// ifs
+using if_node               = any_tree::static_node<if_info, 3>;
+using if_else_node          = any_tree::static_node<if_info, 4>;
+using if_else_expr_node     = any_tree::static_node<if_info, 4>;
+// loops
+using loop_node             = any_tree::static_node<void, 4>;
 
 using identifier_node       = any_tree::leaf<std::string>;
 // literals
@@ -88,8 +90,9 @@ class tree_builder {
     auto primary(const json& object)     -> std::any;
     auto if_stmt(const json& object)     -> std::any;
     auto if_expr(const json& object)     -> if_else_expr_node;
-    auto if_block(const json& object)    -> if_block_node;
+    auto loop(const json& object)        -> loop_node;
     auto call(const json& object)        -> call_node;
+    auto block(const json& object)       -> block_node;
 
     static auto literal(const json& object)  -> std::any;
 
@@ -101,7 +104,9 @@ class tree_builder {
     inline auto expr_hander()        { return std::bind_front(&tree_builder::expr, this); }
     inline auto if_handler()         { return std::bind_front(&tree_builder::if_stmt, this); }
     inline auto if_expr_handler()    { return std::bind_front(&tree_builder::if_expr, this); }
+    inline auto loop_hander()        { return std::bind_front(&tree_builder::loop, this); }
     inline auto call_hander()        { return std::bind_front(&tree_builder::call, this); }
+    inline auto block_hander()       { return std::bind_front(&tree_builder::block, this); }
 
     auto operator_resolution(std::span<std::any> primaries, std::span<std::string> ops) -> std::any;
 

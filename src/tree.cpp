@@ -1,11 +1,10 @@
 #include <algorithm>
-#include <bits/ranges_algo.h>
 #include <iostream>
 #include <iterator>
-#include <typeindex>
 #include <unordered_map>
 #include <functional>
 #include <vector>
+#include <optional>
 
 #include "any_tree/visitor.hpp"
 #include "tree.hpp"
@@ -44,7 +43,7 @@ auto tree_builder::function(const json& object) -> function_node {
 	    }
     );
 
-    std::ranges::transform(object["funcBody"], std::back_inserter(node.children()), stmt_hander());
+    node.child_at(0) = block(object["funcBody"]);
 
     return node;
 }
@@ -55,6 +54,7 @@ auto tree_builder::stmt(const json& object) -> std::any {
 	{"ReturnStmt",             return_stmt_hander()},
 	{"VariableDefinitionStmt", let_stmt_hander()},
 	{"IfStmt",                 if_handler()},
+	{"LoopStmt",               loop_hander()},
     };
 
     return handlers[object["tag"]](object["contents"]);
@@ -152,15 +152,15 @@ auto tree_builder::if_stmt(const json& object) -> std::any {
 	let = let_stmt(object["ifScopeVar"]);
     }
 
-    std::any cond = expr(object["cond"]);
-    std::any then = if_block(object["thenBlock"]);
+    std::any cond = expr(object["ifCond"]);
+    std::any then = block(object["thenBlock"]);
 
     if(const json& else_blk = object["elseBlock"]; !else_blk.is_null()) {
 	if_else_node node{info};
 	node.child_at(0) = let;
 	node.child_at(1) = cond;
 	node.child_at(2) = then;
-	node.child_at(3) = if_block(else_blk);
+	node.child_at(3) = block(else_blk);
 	return node;
     } 
 
@@ -183,17 +183,9 @@ auto tree_builder::if_expr(const json& object) -> if_else_expr_node {
 	node.child_at(0) = let_stmt(object["ifScopeVar"]);
     }
 
-    node.child_at(1) = expr(object["cond"]);
-    node.child_at(2) = if_block(object["thenBlock"]);
-    node.child_at(3) = if_block(object["elseBlock"]);
-    return node;
-}
-
-auto tree_builder::if_block(const json& object) -> if_block_node {
-    if_block_node node{};
-
-    std::ranges::transform(object, std::back_inserter(node.children()), stmt_hander());
-
+    node.child_at(1) = expr(object["ifCond"]);
+    node.child_at(2) = block(object["thenBlock"]);
+    node.child_at(3) = block(object["elseBlock"]);
     return node;
 }
 
@@ -201,6 +193,26 @@ auto tree_builder::call(const json& object) -> call_node {
     call_node node{object["callable"].template get<std::string>()};
 
     std::ranges::transform(object["callParams"], std::back_inserter(node.children()), expr_hander());
+
+    return node;
+}
+
+auto tree_builder::loop(const json& object) -> loop_node {
+    loop_node node{};
+
+    if (const auto& var = object["loopScopeVar"]; !var.is_null()) {
+        node.child_at(0) = let_stmt(var);
+    }
+    
+    if(const auto& cond = object["loopCond"]; !cond.is_null()) {
+	node.child_at(1) = expr(cond);
+    }
+
+    if(const auto& post = object["loopPostIter"]; !post.is_null()) {
+	node.child_at(2) = expr(post);
+    }
+
+    node.child_at(3) = block(object["loopBody"]);
 
     return node;
 }
@@ -217,6 +229,15 @@ auto tree_builder::literal(const json& object) -> std::any {
 
     return handlers[object["tag"]](object["contents"]);
 }
+
+auto tree_builder::block(const json& object) -> block_node {
+    block_node node{};
+
+    std::ranges::transform(object, std::back_inserter(node.children()), stmt_hander());
+
+    return node;
+}
+
 
 auto insert_implicit_cast(std::any &&node, type::type_id from_type, type::type_id to_type) -> std::any {
     if(from_type == to_type) { 
