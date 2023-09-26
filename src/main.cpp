@@ -7,7 +7,9 @@
 
 #include <nlohmann/json.hpp>
 #include <any_tree.hpp>
+#include <ostream>
 
+#include "any_tree/visitor.hpp"
 #include "tree.hpp"
 #include "type/type_id.hpp"
 #include "type/registry.hpp"
@@ -189,7 +191,32 @@ auto main(int argc, char** argv) -> int {
 		any_tree::visit_node(visitor, n.child_at(3));
 		tab -= 2;
 	}),
-	any_tree::make_const_child_visitor<if_block_node>([&visitor] (const if_block_node& n) {
+	any_tree::make_const_child_visitor<loop_node>([&visitor, &tab] (const loop_node& n) {
+		tabs(tab);
+		std::cout << "loop" << std::endl;
+		++tab;
+		tabs(tab);
+		std::cout << "let" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(0));
+		--tab;
+		tabs(tab);
+		std::cout << "cond" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(1));
+		--tab;
+		tabs(tab);
+		std::cout << "post" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(2));
+		--tab;
+		tabs(tab);
+		std::cout << "body" << std::endl;
+		++tab;
+		any_tree::visit_node(visitor, n.child_at(3));
+		--tab;
+	}),
+	any_tree::make_const_child_visitor<block_node>([&visitor] (const block_node& n) {
 		n.for_each_child([&visitor] (const std::any& n) { any_tree::visit_node(visitor, n); });
 	}),
 	any_tree::make_const_child_visitor<implicit_cast_node>([&visitor, &tab] (const implicit_cast_node& n) {
