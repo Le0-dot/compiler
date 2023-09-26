@@ -47,4 +47,17 @@ constexpr inline auto is_literal(type_id tid) -> bool {
     return type_id::u_literal <= tid && tid < type_id::literal_bound;
 }
 
+constexpr inline auto default_type(type_id tid) -> type_id {
+    switch(tid) {
+	case type_id::u_literal:
+	    return type_id::u32;
+	case type_id::i_literal:
+	    return type_id::i32;
+	case type_id::fp_literal:
+	    return type_id::fp64;
+	default:
+	    return tid;
+    };
+}
+
 } // namespace type
