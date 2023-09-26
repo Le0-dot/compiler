@@ -30,7 +30,8 @@ private:
     auto if_stmt         (const visitor& visitor, if_node& node)               -> type::type_id;
     auto if_else_stmt    (const visitor& visitor, if_else_node& node)          -> type::type_id;
     auto if_else_expr    (const visitor& visitor, if_else_expr_node& node)     -> type::type_id;
-    auto if_block        (const visitor& visitor, if_block_node& node)         -> type::type_id;
+    auto loop_stmt       (const visitor& visitor, loop_node& node)             -> type::type_id;
+    auto block           (const visitor& visitor, block_node& node)            -> type::type_id;
     auto call            (const visitor& visitor, call_node& node)             -> type::type_id;
 
     auto identifier (identifier_node& node) -> type::type_id;
