@@ -38,7 +38,7 @@ auto semantic_analyzer::function(const visitor& visitor, function_node& node) ->
 
     // visit statements and analyze them
     auto type = any_tree::visit_node(visitor, node.child_at(0));
-    if(type::valid(type)) {
+    if(!type::valid(type)) {
 	return type::type_id::undetermined;
     }
 
@@ -78,8 +78,9 @@ auto var_def_with_expr(const semantic_analyzer::visitor& visitor, var_def_node& 
 	return type::type_id::undetermined;
     }
 
-    if(type::is_literal(expr_type)) {
-	expr_type = type::default_type(expr_type);
+    if(auto default_t = type::default_type(expr_type); type::is_literal(expr_type)) {
+	node.child_at(0) = insert_implicit_cast(std::move(node.child_at(0)), expr_type, default_t);
+	expr_type = default_t;
     }
 
     if(node.payload().type == type::type_id::unset) {
@@ -124,8 +125,6 @@ auto semantic_analyzer::var_def(const visitor& visitor, var_def_node& node) -> t
 }
 
 auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& node) -> type::type_id {
-    auto binary_op = _special->binary(node.payload().oper);
-
     type::type_id lhs_type = any_tree::visit_node(visitor, node.child_at(0));
     type::type_id rhs_type = any_tree::visit_node(visitor, node.child_at(1));
 
@@ -139,6 +138,12 @@ auto semantic_analyzer::binary_expr(const visitor& visitor, binary_expr_node& no
 	    return lhs_type;
 	}
 	
+	return type::type_id::undetermined;
+    }
+
+    auto binary_op = _special->binary(node.payload().oper);
+
+    if(binary_op.empty()) {
 	return type::type_id::undetermined;
     }
 
@@ -330,7 +335,7 @@ auto semantic_analyzer::loop_stmt(const visitor& visitor, loop_node& node) -> ty
 
     auto post_t = type::type_id::unset;
     if(node.child_at(2).has_value()) {
-	cond_t = any_tree::visit_node(visitor, node.child_at(2));
+	post_t = any_tree::visit_node(visitor, node.child_at(2));
     }
 
     auto body_t = any_tree::visit_node(visitor, node.child_at(3));
@@ -421,6 +426,8 @@ auto semantic_analyzer::char_literal(char_literal_node& node) -> type::type_id {
 }
 
 auto semantic_analyzer::string_literal(string_literal_node& node) -> type::type_id {
+    // not impolemented yet
+    return type::type_id::undetermined;
 }
 
 auto semantic_analyzer::bool_literal(bool_literal_node& node) -> type::type_id {
