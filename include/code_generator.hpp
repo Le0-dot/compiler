@@ -38,7 +38,8 @@ private:
     auto if_stmt         (const visitor& visitor, const if_node& node)               -> llvm::Value*;
     auto if_else_stmt    (const visitor& visitor, const if_else_node& node)          -> llvm::Value*;
     auto if_else_expr    (const visitor& visitor, const if_else_expr_node& node)     -> llvm::Value*;
-    auto if_block        (const visitor& visitor, const if_block_node& node)         -> llvm::Value*;
+    auto loop_stmt       (const visitor& visitor, const loop_node& node)             -> llvm::Value*;
+    auto block           (const visitor& visitor, const block_node& node)            -> llvm::Value*;
     auto call            (const visitor& visitor, const call_node& node)             -> llvm::Value*;
     auto implicit_cast   (const visitor& visitor, const implicit_cast_node& node)    -> llvm::Value*;
 

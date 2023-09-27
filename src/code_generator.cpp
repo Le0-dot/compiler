@@ -38,7 +38,7 @@ auto code_generator::file(const visitor& visitor, const file_node& node) -> llvm
 	    [] (llvm::Value* value) { return value == nullptr; }
     );
     if(invalid_functions) {
-	std::cout << "invalid function argument" << std::endl;
+	std::cout << "invalid function" << std::endl;
 	return nullptr;
     }
 
@@ -74,9 +74,12 @@ auto code_generator::function(const visitor& visitor, const function_node& node)
 	_scope.add(std::string{arg.getName()}, inst);
     }
 
-    node.for_each_child([&visitor] (const std::any& node) { any_tree::visit_node(visitor, node); });
+    llvm::Value* block_result = any_tree::visit_node(visitor, node.child_at(0));
+    if(block_result == nullptr) {
+	return nullptr;
+    }
 
-    if(llvm::verifyFunction(*func)) {
+    if(llvm::verifyFunction(*func, &llvm::errs())) {
 	func->eraseFromParent();
 	return nullptr;
     }
@@ -185,7 +188,7 @@ auto code_generator::if_stmt(const visitor& visitor, const if_node& node) -> llv
     }
 
     llvm::BasicBlock* then_block = llvm::BasicBlock::Create(*_context, "then", _scope.function());
-    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge");
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge", _scope.function());
 
     _builder.CreateCondBr(cond, then_block, merge_block);
 
@@ -200,7 +203,6 @@ auto code_generator::if_stmt(const visitor& visitor, const if_node& node) -> llv
     _builder.CreateBr(merge_block);
 
     // merge
-    _scope.function()->getBasicBlockList().push_back(merge_block);
     _builder.SetInsertPoint(merge_block);
 
     return then_value;
@@ -218,8 +220,8 @@ auto code_generator::if_else_stmt(const visitor& visitor, const if_else_node& no
     }
 
     llvm::BasicBlock* then_block = llvm::BasicBlock::Create(*_context, "then", _scope.function());
-    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(*_context, "else");
-    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge");
+    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(*_context, "else", _scope.function());
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge", _scope.function());
 
     _builder.CreateCondBr(cond, then_block, else_block);
 
@@ -235,7 +237,6 @@ auto code_generator::if_else_stmt(const visitor& visitor, const if_else_node& no
     then_block = _builder.GetInsertBlock();
 
     // else
-    _scope.function()->getBasicBlockList().push_back(else_block);
     _builder.SetInsertPoint(else_block);
 
     llvm::Value* else_value = any_tree::visit_node(visitor, node.child_at(3));
@@ -246,7 +247,6 @@ auto code_generator::if_else_stmt(const visitor& visitor, const if_else_node& no
     _builder.CreateBr(merge_block);
 
     // merge
-    _scope.function()->getBasicBlockList().push_back(merge_block);
     _builder.SetInsertPoint(merge_block);
 
     return else_value;
@@ -264,8 +264,8 @@ auto code_generator::if_else_expr(const visitor& visitor, const if_else_expr_nod
     }
 
     llvm::BasicBlock* then_block = llvm::BasicBlock::Create(*_context, "then", _scope.function());
-    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(*_context, "else");
-    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge");
+    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(*_context, "else", _scope.function());
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*_context, "if_merge", _scope.function());
 
     _builder.CreateCondBr(cond, then_block, else_block);
 
@@ -281,7 +281,6 @@ auto code_generator::if_else_expr(const visitor& visitor, const if_else_expr_nod
     then_block = _builder.GetInsertBlock();
 
     // else
-    _scope.function()->getBasicBlockList().push_back(else_block);
     _builder.SetInsertPoint(else_block);
 
     llvm::Value* else_value = any_tree::visit_node(visitor, node.child_at(3));
@@ -293,7 +292,6 @@ auto code_generator::if_else_expr(const visitor& visitor, const if_else_expr_nod
     else_block = _builder.GetInsertBlock();
 
     // merge
-    _scope.function()->getBasicBlockList().push_back(merge_block);
     _builder.SetInsertPoint(merge_block);
 
     llvm::PHINode* phi = _builder.CreatePHI(then_value->getType(), 2, "tmpif");
@@ -303,7 +301,51 @@ auto code_generator::if_else_expr(const visitor& visitor, const if_else_expr_nod
     return phi;
 }
 
-auto code_generator::if_block(const visitor& visitor, const if_block_node& node) -> llvm::Value* {
+auto code_generator::loop_stmt(const visitor& visitor, const loop_node& node) -> llvm::Value* {
+    std::cout << "loop" << std::endl;
+    if(const auto& let = node.child_at(0); let.has_value() && any_tree::visit_node(visitor, let) == nullptr) {
+	return nullptr;
+    }
+
+    llvm::BasicBlock* loop = llvm::BasicBlock::Create(*_context, "loop", _scope.function());
+    llvm::BasicBlock* after = llvm::BasicBlock::Create(*_context, "loop_after", _scope.function());
+
+    const auto& condition = node.child_at(1);
+
+    if(condition.has_value()) {
+	llvm::Value* cond = any_tree::visit_node(visitor, condition);
+	if(cond == nullptr) {
+	    return nullptr;
+	}
+	_builder.CreateCondBr(cond, loop, after);
+    } else {
+	_builder.CreateBr(loop);
+    }
+
+    _builder.SetInsertPoint(loop);
+
+    llvm::Value* loop_value = any_tree::visit_node(visitor, node.child_at(3));
+    if(loop_value == nullptr) {
+	return nullptr;
+    }
+
+    if(const auto& post = node.child_at(2); post.has_value() && any_tree::visit_node(visitor, post) == nullptr) {
+	return nullptr;
+    }
+
+    if(condition.has_value()) {
+	llvm::Value* cond = any_tree::visit_node(visitor, condition);
+	_builder.CreateCondBr(cond, loop, after);
+    } else {
+	_builder.CreateBr(loop);
+    }
+
+    _builder.SetInsertPoint(after);
+
+    return loop_value;
+}
+
+auto code_generator::block(const visitor& visitor, const block_node& node) -> llvm::Value* {
     std::vector<llvm::Value*> statements{};
     statements.reserve(node.children_size());
 
@@ -318,7 +360,7 @@ auto code_generator::if_block(const visitor& visitor, const if_block_node& node)
 	    [] (llvm::Value* value) { return value == nullptr; }
     );
     if(invalid_statements) {
-	std::cout << "invalid function argument" << std::endl;
+	std::cout << "invalid statement" << std::endl;
 	return nullptr;
     }
 
@@ -346,7 +388,7 @@ auto code_generator::call(const visitor& visitor, const call_node& node) -> llvm
 	    [] (llvm::Value* value) { return value == nullptr; }
     );
     if(invalid_params) {
-	std::cout << "invalid function argument" << std::endl;
+	std::cout << "invalid call argument" << std::endl;
 	return nullptr;
     }
 
@@ -396,6 +438,8 @@ auto code_generator::char_literal(const char_literal_node& node) -> llvm::Value*
 }
 
 auto code_generator::string_literal(const string_literal_node& node) -> llvm::Value* {
+    // not implemented yet
+    return nullptr;
 }
 
 auto code_generator::bool_literal(const bool_literal_node& node) -> llvm::Value* {
@@ -420,7 +464,8 @@ code_generator::code_generator(const std::string& module_name, llvm::LLVMContext
 	any_tree::make_const_child_visitor<if_node>              ([this] (const if_node& node)                { return if_stmt(_visitor, node); }),
 	any_tree::make_const_child_visitor<if_else_node>         ([this] (const if_else_node& node)           { return if_else_stmt(_visitor, node); }),
 	any_tree::make_const_child_visitor<if_else_expr_node>    ([this] (const if_else_expr_node& node)      { return if_else_expr(_visitor, node); }),
-	any_tree::make_const_child_visitor<if_block_node>        ([this] (const if_block_node& node)          { return if_block(_visitor, node); }),
+	any_tree::make_const_child_visitor<loop_node>            ([this] (const loop_node& node)              { return loop_stmt(_visitor, node); }),
+	any_tree::make_const_child_visitor<block_node>           ([this] (const block_node& node)             { return block(_visitor, node); }),
 	any_tree::make_const_child_visitor<call_node>            ([this] (const call_node& node)              { return call(_visitor, node); }),
 	any_tree::make_const_child_visitor<implicit_cast_node>   ([this] (const implicit_cast_node& node)     { return implicit_cast(_visitor, node); }),
 	any_tree::make_const_child_visitor<identifier_node>      ([this] (const identifier_node& node)        { return identifier(node); }),
