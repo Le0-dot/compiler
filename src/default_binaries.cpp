@@ -1,3 +1,4 @@
+#include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Value.h>
 
@@ -156,12 +157,64 @@ void fp_division(special_functions& functions) {
     add_binary(type::type_id::fp64);
 }
 
+void u_less(special_functions& functions) {
+    auto binary = [] (llvm::IRBuilderBase* builder, llvm::Value* lhs, llvm::Value* rhs) {
+	std::cout << "ICmpULT calling" << std::endl;
+	return builder->CreateICmpULT(lhs, rhs, "less");
+    };
+
+    auto add_binary = [&functions, &binary] (type::type_id type) {
+	functions.binary("<").insert(type, type, type::type_id::bool_);
+	functions.binary("<").specialize(type, type, binary);
+    };
+
+    add_binary(type::type_id::u8 );
+    add_binary(type::type_id::u16);
+    add_binary(type::type_id::u32);
+    add_binary(type::type_id::u64);
+}
+
+void i_less(special_functions& functions) {
+    auto binary = [] (llvm::IRBuilderBase* builder, llvm::Value* lhs, llvm::Value* rhs) {
+	return builder->CreateICmpSLT(lhs, rhs, "less");
+    };
+
+    auto add_binary = [&functions, &binary] (type::type_id type) {
+	functions.binary("<").insert(type, type, type::type_id::bool_);
+	functions.binary("<").specialize(type, type, binary);
+    };
+
+    add_binary(type::type_id::i8 );
+    add_binary(type::type_id::i16);
+    add_binary(type::type_id::i32);
+    add_binary(type::type_id::i64);
+}
+
+void fp_less(special_functions& functions) {
+    auto binary = [] (llvm::IRBuilderBase* builder, llvm::Value* lhs, llvm::Value* rhs) {
+	return builder->CreateFCmpOLT(lhs, rhs, "less");
+    };
+
+    auto add_binary = [&functions, &binary] (type::type_id type) {
+	functions.binary("<").insert(type, type, type::type_id::bool_);
+	functions.binary("<").specialize(type, type, binary);
+    };
+
+    add_binary(type::type_id::fp32);
+    add_binary(type::type_id::fp64);
+}
+
 void default_binaries(special_functions& functions) {
     functions.new_binary("=", 0);
-    functions.new_binary("+", 1);
-    functions.new_binary("-", 1);
-    functions.new_binary("*", 2);
-    functions.new_binary("/", 2);
+    functions.new_binary("<", 1);
+    functions.new_binary("+", 2);
+    functions.new_binary("-", 2);
+    functions.new_binary("*", 3);
+    functions.new_binary("/", 3);
+
+    u_less(functions);
+    i_less(functions);
+    fp_less(functions);
 
     ui_addition(functions);
     fp_addition(functions);
