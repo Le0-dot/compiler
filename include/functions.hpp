@@ -85,6 +85,8 @@ public:
 
     auto end() const { return _binary.end(); }
     auto end()       { return _binary.end(); }
+
+    auto empty() const { return _binary.empty(); }
 };
 
 class special_functions {
