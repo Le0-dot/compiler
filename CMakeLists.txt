@@ -23,7 +23,7 @@ include(HandleLLVMOptions)
 
 add_definitions(${LLVM_DEFINITIONS})
 
-llvm_map_components_to_libnames(llvm_libs Support Core IRReader Passes)
+llvm_map_components_to_libnames(llvm_libs Support Core IRReader Passes X86)
 
 
 # Add executable

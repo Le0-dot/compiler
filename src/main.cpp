@@ -1,9 +1,19 @@
+#include <format>
 #include <iostream>
 #include <fstream>
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/Support/CodeGen.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/TargetParser/Host.h>
 
 #include <nlohmann/json.hpp>
 #include <any_tree.hpp>
@@ -272,11 +282,13 @@ auto main(int argc, char** argv) -> int {
     any_tree::visit_node(visitor, tree);
 
     if(!type::valid(analyzer_result)) {
-	return -1;
+	std::cerr << "semantic analyzer pass failed" << std::endl;
+	return 1;
     }
 
     code_generator generator{argv[1], &context, &functions, &types};
     if(llvm::Value* func = any_tree::visit_node(generator.get_visitor(), tree); func == nullptr) {
+	std::cerr << "code generator pass failed" << std::endl;
 	return 1;
     }
 
@@ -308,6 +320,52 @@ auto main(int argc, char** argv) -> int {
 
     std::cerr << "after optimization" << std::endl;
     module.print(llvm::errs(), nullptr);
+
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmParsers();
+    llvm::InitializeAllAsmPrinters();
+
+    std::string target_triple = llvm::sys::getDefaultTargetTriple();
+    module.setTargetTriple(target_triple);
+
+    std::string error;
+    const llvm::Target* target = llvm::TargetRegistry::lookupTarget(target_triple, error);
+    if(!target) {
+	llvm::errs() << error;
+	return 1;
+    }
+
+    const char *cpu = "generic";
+    const char *features = "";
+
+    llvm::TargetOptions opt;
+    //auto rm = std::optional<llvm::Reloc::Model>();
+    llvm::TargetMachine* target_machine = target->createTargetMachine(target_triple, cpu, features, opt, {});
+
+    module.setDataLayout(target_machine->createDataLayout());
+
+    std::string filename = std::string{argv[1]} + ".o";
+    std::error_code error_code;
+    llvm::raw_fd_ostream dest(filename, error_code, llvm::sys::fs::OF_None);
+
+    if (error_code) {
+	llvm::errs() << "Could not open file: " << error_code.message();
+        return 1;
+    }
+    
+    llvm::legacy::PassManager pass;
+    auto filetype = llvm::CodeGenFileType::CGFT_ObjectFile;
+    if(target_machine->addPassesToEmitFile(pass, dest, nullptr, filetype)) {
+	std::cerr << "target machine cannot emit files of this type";
+	return 1;
+    }
+
+    pass.run(module);
+    dest.flush();
+
+    std::cout << std::format("Wrote {}\n", filename);
 
     return 0;
 }
